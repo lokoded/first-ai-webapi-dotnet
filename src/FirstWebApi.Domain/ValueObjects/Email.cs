@@ -2,11 +2,9 @@ using System.Text.RegularExpressions;
 
 namespace FirstWebApi.Domain.ValueObjects;
 
-public partial class Email
+public readonly partial record struct Email
 {
     public string Endereco { get; }
-
-    protected Email() : this("placeholder@email.com") { }
 
     public Email(string endereco)
     {
@@ -22,7 +20,4 @@ public partial class Email
     private static partial Regex EmailRegex();
 
     public override string ToString() => Endereco;
-    public override bool Equals(object? obj) => obj is Email other && Endereco == other.Endereco;
-    public override int GetHashCode() => Endereco.GetHashCode();
 }
-

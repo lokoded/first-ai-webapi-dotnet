@@ -134,6 +134,9 @@ builder.Services.AddRateLimiter(options =>
 // CORS — restrito por ambiente (OWASP A05)
 // Em produção: apenas origens conhecidas. Em dev: livre.
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+if (allowedOrigins is not { Length: > 0 } && !builder.Environment.IsDevelopment())
+    throw new InvalidOperationException("Cors:AllowedOrigins deve ser configurado em ambientes não-Development.");
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ApiCors", policy =>

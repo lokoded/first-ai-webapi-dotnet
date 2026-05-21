@@ -57,12 +57,13 @@ public class AuthService : IAuthService
         var result = await _userManager.CreateAsync(user, request.Senha);
         if (!result.Succeeded)
         {
-            var erros = string.Join(", ", result.Errors.Select(e => e.Description));
-            _logger.LogWarning("Falha ao registrar usuário {Email}: {Erros}", request.Email, erros);
-            throw new InvalidOperationException($"Falha ao criar usuário: {erros}");
+            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+            _logger.LogWarning("Falha ao registrar usuário: {Errors}", errors);
+            throw new InvalidOperationException($"Falha ao criar usuário: {errors}");
         }
 
         await _userManager.AddToRoleAsync(user, "User");
+        user.SetRoleFromIdentity();
 
         if (!string.IsNullOrEmpty(request.Cpf))
         {
@@ -73,8 +74,6 @@ public class AuthService : IAuthService
 
         if (!string.IsNullOrEmpty(request.Rg))
         {
-            if (request.Rg.Length < 4 || request.Rg.Length > 20)
-                throw new ArgumentException("RG inválido.");
             var (ciphertext, iv, tag, dk) = await _encryptionService.EncryptAsync(request.Rg);
             user.SetRgData(ciphertext, iv, tag, dk);
         }
@@ -114,14 +113,24 @@ public class AuthService : IAuthService
     {
         var user = await _userRepository.GetByEmailAsync(request.Email);
         if (user == null)
-            throw new UnauthorizedAccessException("Email ou senha inválidos.");
-
-        var senhaValida = await _userManager.CheckPasswordAsync(user, request.Senha);
-        if (!senhaValida)
         {
-            _logger.LogWarning("Tentativa de login inválida para {Email}", request.Email);
+            // Equaliza tempo via hash dummy para evitar timing attack
+            await _userManager.CheckPasswordAsync(IdentityUserPlaceholder(), "fake");
             throw new UnauthorizedAccessException("Email ou senha inválidos.");
         }
+
+        if (await _userManager.IsLockedOutAsync(user))
+            throw new UnauthorizedAccessException("Conta temporariamente bloqueada por muitas tentativas inválidas. Tente novamente em 15 minutos.");
+
+        var passwordValid = await _userManager.CheckPasswordAsync(user, request.Senha);
+        if (!passwordValid)
+        {
+            await _userManager.AccessFailedAsync(user);
+            _logger.LogWarning("Tentativa de login inválida para usuário {UserId}", user.Id);
+            throw new UnauthorizedAccessException("Email ou senha inválidos.");
+        }
+
+        await _userManager.ResetAccessFailedCountAsync(user);
 
         var (refreshToken, tokenHash) = _tokenService.GenerateRefreshToken();
         var refreshTokenEntity = new RefreshToken(user.Id, tokenHash, DateTime.UtcNow.AddDays(7));
@@ -195,13 +204,15 @@ public class AuthService : IAuthService
         if (user == null)
             throw new KeyNotFoundException("Usuário não encontrado.");
 
+        var roles = await _userManager.GetRolesAsync(user);
+
         var response = new UserResponse
         {
             Id = user.Id,
             Nome = user.Nome,
             UserName = user.UserName!,
             Email = user.Email!,
-            Role = user.Role.ToString(),
+            Role = roles.FirstOrDefault() ?? "User",
             CreatedAt = user.CreatedAt
         };
 
@@ -248,5 +259,6 @@ public class AuthService : IAuthService
 
         return response;
     }
-}
 
+    private static User IdentityUserPlaceholder() => new("", "", "");
+}

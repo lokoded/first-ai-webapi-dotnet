@@ -19,18 +19,8 @@ public class CachedAddressRepository : IAddressRepository
 
     public async Task<Address?> GetByUserIdAsync(Guid userId)
     {
-        var key = $"address:user:{userId}";
-        var cached = await _cache.GetStringAsync(key);
-        if (cached is not null)
-            return JsonSerializer.Deserialize<Address>(cached);
-
-        var result = await _inner.GetByUserIdAsync(userId);
-        if (result is not null)
-            await _cache.SetStringAsync(key, JsonSerializer.Serialize(result), new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = Ttl
-            });
-        return result;
+        // Não cacheia Address pois contém dados sensíveis cifrados (endereço)
+        return await _inner.GetByUserIdAsync(userId);
     }
 
     public async Task AddAsync(Address address)

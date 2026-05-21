@@ -19,17 +19,12 @@ public class CachedComicRepository : IComicRepository
 
     public async Task<List<Comic>> GetByUserIdAsync(Guid userId)
     {
-        var key = $"comics:user:{userId}";
-        var cached = await _cache.GetStringAsync(key);
-        if (cached is not null)
-            return JsonSerializer.Deserialize<List<Comic>>(cached)!;
+        return await _inner.GetByUserIdAsync(userId);
+    }
 
-        var result = await _inner.GetByUserIdAsync(userId);
-        await _cache.SetStringAsync(key, JsonSerializer.Serialize(result), new DistributedCacheEntryOptions
-        {
-            AbsoluteExpirationRelativeToNow = Ttl
-        });
-        return result;
+    public async Task<(List<Comic> Items, int TotalCount)> GetPaginatedByUserIdAsync(Guid userId, int page, int pageSize)
+    {
+        return await _inner.GetPaginatedByUserIdAsync(userId, page, pageSize);
     }
 
     public async Task<Comic?> GetByIdAsync(Guid id)

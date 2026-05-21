@@ -5,6 +5,7 @@ using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Application.Validators;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace FirstWebApi.WebApi.Controllers;
@@ -75,22 +76,14 @@ public class ComicsController : ControllerBase
         var validator = new ComicRequestValidator();
         var validation = await validator.ValidateAsync(request);
         if (!validation.IsValid)
-        {
-            var errors = validation.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
-            return ValidationProblem(new ValidationProblemDetails(errors)
-            {
-                Status = StatusCodes.Status400BadRequest
-            });
-        }
+            return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
         var result = await _comicService.CreateAsync(request, userId);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
     [HttpPut("{id:guid}")]
-    [ProducesResponseType(typeof(ComicResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -103,21 +96,13 @@ public class ComicsController : ControllerBase
         var validator = new ComicRequestValidator();
         var validation = await validator.ValidateAsync(request);
         if (!validation.IsValid)
-        {
-            var errors = validation.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
-            return ValidationProblem(new ValidationProblemDetails(errors)
-            {
-                Status = StatusCodes.Status400BadRequest
-            });
-        }
+            return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
         var result = await _comicService.UpdateAsync(id, request, userId);
         if (result is null)
             return Problem(detail: "Comic não encontrada.", statusCode: 404, title: "Não encontrado");
 
-        return Ok(result);
+        return NoContent();
     }
 
     [HttpDelete("{id:guid}")]
