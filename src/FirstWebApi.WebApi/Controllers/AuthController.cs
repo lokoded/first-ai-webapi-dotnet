@@ -4,13 +4,14 @@ using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Application.Validators;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace FirstWebApi.WebApi.Controllers;
 
 [ApiController]
 [Route("api/auth")]
-[EnableRateLimiting("Auth")] // 10 req/min — proteção contra brute force e abuso
+[EnableRateLimiting("Auth")]
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
@@ -26,18 +27,10 @@ public class AuthController : ControllerBase
         var validator = new RegisterRequestValidator();
         var validation = await validator.ValidateAsync(request);
         if (!validation.IsValid)
-        {
-            var errors = validation.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
-            return ValidationProblem(new ValidationProblemDetails(errors)
-            {
-                Status = StatusCodes.Status400BadRequest
-            });
-        }
+            return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
         var result = await _authService.RegisterAsync(request);
-        return Ok(result);
+        return CreatedAtAction(nameof(Register), new { email = result.Email }, result);
     }
 
     [HttpPost("login")]
@@ -46,15 +39,7 @@ public class AuthController : ControllerBase
         var validator = new LoginRequestValidator();
         var validation = await validator.ValidateAsync(request);
         if (!validation.IsValid)
-        {
-            var errors = validation.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
-            return ValidationProblem(new ValidationProblemDetails(errors)
-            {
-                Status = StatusCodes.Status400BadRequest
-            });
-        }
+            return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
         var result = await _authService.LoginAsync(request);
         return Ok(result);
@@ -63,8 +48,10 @@ public class AuthController : ControllerBase
     [HttpPost("refresh")]
     public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
     {
-        if (string.IsNullOrWhiteSpace(request.RefreshToken))
-            return Problem(detail: "Refresh token é obrigatório.", statusCode: 400, title: "Requisição inválida");
+        var validator = new RefreshTokenRequestValidator();
+        var validation = await validator.ValidateAsync(request);
+        if (!validation.IsValid)
+            return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
         var result = await _authService.RefreshTokenAsync(request.RefreshToken);
         return Ok(result);

@@ -4,6 +4,7 @@ using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Application.Validators;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace FirstWebApi.WebApi.Controllers;
@@ -22,7 +23,7 @@ public class AdminComicTypesController : ControllerBase
     }
 
     [HttpPost]
-    [ProducesResponseType(typeof(ComicTypeResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(ComicTypeResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status409Conflict)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
@@ -32,18 +33,10 @@ public class AdminComicTypesController : ControllerBase
         var validator = new ComicTypeRequestValidator();
         var validation = await validator.ValidateAsync(request);
         if (!validation.IsValid)
-        {
-            var errors = validation.Errors
-                .GroupBy(e => e.PropertyName)
-                .ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray());
-            return ValidationProblem(new ValidationProblemDetails(errors)
-            {
-                Status = StatusCodes.Status400BadRequest
-            });
-        }
+            return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
         var result = await _comicTypeService.CreateAsync(request.Nome);
-        return Ok(result);
+        return CreatedAtAction(nameof(Create), new { nome = result.Nome }, result);
     }
 
     [HttpDelete("{id:guid}")]
@@ -60,5 +53,4 @@ public class AdminComicTypesController : ControllerBase
 
         return NoContent();
     }
-
 }
