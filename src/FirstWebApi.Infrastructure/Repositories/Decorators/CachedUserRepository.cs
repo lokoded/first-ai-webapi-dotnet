@@ -19,18 +19,8 @@ public class CachedUserRepository : IUserRepository
 
     public async Task<User?> GetByIdAsync(Guid id)
     {
-        var key = $"user:{id}";
-        var cached = await _cache.GetStringAsync(key);
-        if (cached is not null)
-            return JsonSerializer.Deserialize<User>(cached);
-
-        var result = await _inner.GetByIdAsync(id);
-        if (result is not null)
-            await _cache.SetStringAsync(key, JsonSerializer.Serialize(result), new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = Ttl
-            });
-        return result;
+        // Não cacheia User pois contém dados sensíveis cifrados (CPF, RG)
+        return await _inner.GetByIdAsync(id);
     }
 
     public async Task<User?> GetByEmailAsync(string email)
