@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  DOTNET_VERSION: '10.0.x'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          SA_PASSWORD: Str0ngP@ssw0rd!
+          MSSQL_PID: Developer
+        ports:
+          - 1433:1433
+
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+
+      localstack:
+        image: localstack/localstack:3.8
+        env:
+          SERVICES: kms
+          AWS_DEFAULT_REGION: us-east-1
+        ports:
+          - 4566:4566
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Testes Unitários
+        run: dotnet test tests/FirstWebApi.UnitTests --no-restore --configuration Release --verbosity normal
+
+      - name: Testes de Integração
+        run: dotnet test tests/FirstWebApi.IntegrationTests --no-restore --configuration Release --verbosity normal
+        env:
+          ConnectionStrings__DefaultConnection: Server=localhost,1433;Database=FirstWebApiDb_Test;User Id=sa;Password=Str0ngP@ssw0rd!;TrustServerCertificate=True
+          ConnectionStrings__Redis: localhost:6379
+          Kms__Endpoint: http://localhost:4566
+          Kms__UseHttp: true
+          Kms__KeyId: alias/firstwebapi-key
+          Kms__Region: us-east-1
+          Kms__AccessKey: fake
+          Kms__SecretKey: fake
+          ASPNETCORE_ENVIRONMENT: Testing
