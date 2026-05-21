@@ -1,10 +1,8 @@
 namespace FirstWebApi.Domain.ValueObjects;
 
-public class Cpf
+public readonly record struct Cpf
 {
     public string Numero { get; }
-
-    protected Cpf() : this("00000000000") { }
 
     public Cpf(string numero)
     {
@@ -47,10 +45,4 @@ public class Cpf
 
     public override string ToString() => Numero;
     public string Formatado() => $"{Numero[..3]}.{Numero[3..6]}.{Numero[6..9]}-{Numero[9..]}";
-
-    public override bool Equals(object? obj) => obj is Cpf other && Numero == other.Numero;
-    public override int GetHashCode() => Numero.GetHashCode();
-    public static bool operator ==(Cpf? left, Cpf? right) =>
-        ReferenceEquals(left, right) || (left is not null && right is not null && left.Numero == right.Numero);
-    public static bool operator !=(Cpf? left, Cpf? right) => !(left == right);
 }
