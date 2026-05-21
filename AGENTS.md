@@ -17,8 +17,8 @@ Web API .NET 10 em Clean Architecture para gerenciamento de coleção de HQs com
 - Build: ✅ 0 erros, 0 warnings
 - Testes unitários: ✅ 35/35
 - Testes de integração: ✅ 21/21 (Docker Compose rodando)
-- GitHub Actions: ❌ Pendente (Módulo 3)
-- Módulo atual: 1 (OpenCode, Agents & CLI)
+- GitHub Actions: ✅ CI + Security Scan
+- Módulo atual: 3 (CI/CD)
 
 ## Comandos
 
@@ -225,3 +225,21 @@ Registro de aprendizados, descobertas e lições durante o desenvolvimento.
 - `opencode.json` usa `"agent"` (singular) não `"agents"`
 - Skills requerem SKILL.md com YAML frontmatter em subfolder
 - EF Core 10 bloqueia `PendingModelChangesWarning` por padrão — precisa configurar em Dev/Testing
+
+### 21/05/2026 — Módulo 3 concluído
+
+**CI/CD com GitHub Actions**
+- Repositório Git inicializado e enviado para GitHub (SSH)
+- Pipeline CI com build + testes unitários + testes de integração
+- SQL Server, Redis e LocalStack como service containers no CI
+- Credenciais movidas para GitHub Secrets (segurança)
+- Quality gate: cobertura mínima de 70% via coverlet + runsettings
+- Badge de status do CI no README
+- Workflow de varredura de vulnerabilidades (semanal + push)
+- Branch `develop` criada como padrão de trabalho
+
+**Descobertas**:
+- `dotnet add package` resolve versão mais recente automaticamente (coverlet 6.0.4 → 10.0.1)
+- SSH na porta 22 pode ser bloqueado por rede; alternativa é porta 443
+- GitHub API retorna 404 para repositórios privados sem autenticação
+- Service containers no GitHub Actions substituem o docker-compose local
