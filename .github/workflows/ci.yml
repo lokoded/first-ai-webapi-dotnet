@@ -51,10 +51,10 @@ jobs:
         run: dotnet build --no-restore --configuration Release
 
       - name: Testes Unitários
-        run: dotnet test tests/FirstWebApi.UnitTests --no-restore --configuration Release --verbosity normal
+        run: dotnet test tests/FirstWebApi.UnitTests --no-restore --configuration Release --settings coverlet.runsettings --verbosity normal
 
       - name: Testes de Integração
-        run: dotnet test tests/FirstWebApi.IntegrationTests --no-restore --configuration Release --verbosity normal
+        run: dotnet test tests/FirstWebApi.IntegrationTests --no-restore --configuration Release --settings coverlet.runsettings --verbosity normal
         env:
           ConnectionStrings__DefaultConnection: ${{ secrets.CONNECTION_STRING_TEST }}
           ConnectionStrings__Redis: ${{ secrets.REDIS_CONNECTION }}
