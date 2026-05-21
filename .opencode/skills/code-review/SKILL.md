@@ -1,6 +1,6 @@
 ---
 name: code-review
-description: Instruções para revisar código na FirstWebApi contra padrões do projeto
+description: Use quando precisar revisar código, verificar qualidade, auditar segurança ou validar PRs. Aborda OWASP Top 10, Clean Architecture, convenções de código e armadilhas conhecidas da FirstWebApi.
 ---
 
 ## O que verificar (por ordem)

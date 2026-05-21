@@ -1,6 +1,6 @@
 ---
 name: criar-entidade
-description: Instruções para adicionar uma nova entidade com CRUD completo na FirstWebApi
+description: Use quando precisar criar, adicionar ou implementar uma nova entidade, modelo, tabela ou CRUD completo (Domain → Application → Infrastructure → WebApi → Testes). NÃO usar para endpoints avulsos.
 ---
 
 ## Ordem de Implementação

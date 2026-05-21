@@ -23,7 +23,7 @@ public class ExceptionMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro não tratado: {Message}", ex.Message);
+            _logger.LogError(ex, "Erro não tratado");
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -31,6 +31,7 @@ public class ExceptionMiddleware
     private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/problem+json";
+        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
 
         var (statusCode, title, detail) = exception switch
         {

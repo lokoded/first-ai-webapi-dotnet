@@ -1,6 +1,6 @@
 ---
 name: criar-endpoint
-description: Instruções para adicionar um novo endpoint HTTP em controllers existentes da FirstWebApi
+description: Use quando precisar criar, adicionar ou implementar um novo endpoint HTTP, rota, action de controller ou método de API. NÃO usar para criar entidades novas ou CRUD completo.
 ---
 
 ## Passo 1 — Identificar o controller

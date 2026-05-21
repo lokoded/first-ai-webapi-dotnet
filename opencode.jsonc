@@ -1,25 +1,49 @@
 {
   "$schema": "https://opencode.ai/config.json",
-
-  // Instruções extras carregadas no contexto da IA
+  "shell": "pwsh",
+  "model": "anthropic/claude-sonnet-4-6",
+  "small_model": "anthropic/claude-haiku-3-5",
   "instructions": [
     ".opencode/rules.md",
     "AGENTS.md"
   ],
-
-  // Configuração de agentes especializados
-  "agent": {
-    "dev-agent": {
-      "description": "Desenvolvimento geral da FirstWebApi — .NET 10, Clean Architecture, C#",
-      "mode": "subagent"
+  "default_agent": "dev-agent",
+  "command": {
+    "build": {
+      "description": "Compilar o projeto",
+      "template": "dotnet build"
     },
-    "tester": {
-      "description": "Escrever e executar testes (xUnit, Moq, FluentAssertions) na FirstWebApi",
-      "mode": "subagent"
+    "test-unit": {
+      "description": "Executar testes unitários",
+      "template": "dotnet test tests/FirstWebApi.UnitTests"
     },
-    "security-reviewer": {
-      "description": "Revisar código contra OWASP Top 10 e boas práticas de segurança em APIs .NET",
-      "mode": "subagent"
+    "test-int": {
+      "description": "Executar testes de integração (requer Docker)",
+      "template": "dotnet test tests/FirstWebApi.IntegrationTests"
+    },
+    "test-all": {
+      "description": "Executar todos os testes",
+      "template": "dotnet test"
+    },
+    "docker-up": {
+      "description": "Subir infra Docker (SQL Server + Redis + LocalStack)",
+      "template": "docker compose up -d"
+    },
+    "docker-down": {
+      "description": "Derrubar infra Docker",
+      "template": "docker compose down -v"
+    },
+    "run": {
+      "description": "Rodar API localmente",
+      "template": "dotnet run --project src/FirstWebApi.WebApi"
+    },
+    "docker-logs": {
+      "description": "Ver logs dos containers Docker",
+      "template": "docker compose logs -f"
+    },
+    "coverage": {
+      "description": "Executar testes com cobertura",
+      "template": "dotnet test --collect:\"XPlat Code Coverage\" --settings coverlet.runsettings"
     }
   }
 }

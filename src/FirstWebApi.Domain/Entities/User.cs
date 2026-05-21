@@ -1,4 +1,3 @@
-using FirstWebApi.Domain.Enums;
 using Microsoft.AspNetCore.Identity;
 
 namespace FirstWebApi.Domain.Entities;
@@ -6,7 +5,6 @@ namespace FirstWebApi.Domain.Entities;
 public class User : IdentityUser<Guid>
 {
     public string Nome { get; private set; } = string.Empty;
-    public EUserRole Role { get; private set; } = EUserRole.User;
 
     public byte[]? CpfCiphertext { get; private set; }
     public byte[]? CpfIv { get; private set; }
@@ -29,7 +27,6 @@ public class User : IdentityUser<Guid>
         Nome = nome;
         UserName = userName;
         Email = email;
-        Role = EUserRole.User;
     }
 
     public void SetRoleFromIdentity() => Role = EUserRole.User;

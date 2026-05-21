@@ -158,7 +158,18 @@ public class AuthService : IAuthService
         var tokenHash = _tokenService.HashToken(refreshToken);
         var storedToken = await _refreshTokenRepository.GetByTokenHashAsync(tokenHash);
 
-        if (storedToken is null || !storedToken.IsActive)
+        if (storedToken is null)
+            throw new UnauthorizedAccessException("Refresh token inválido ou expirado.");
+
+        if (storedToken.IsRevoked)
+        {
+            // Token reuse detected — possível roubo de token
+            _logger.LogWarning("Possível roubo de refresh token detectado para usuário {UserId}. Revogando todos os tokens.", storedToken.UserId);
+            await RevokeRefreshTokensAsync(storedToken.UserId);
+            throw new UnauthorizedAccessException("Refresh token inválido ou expirado.");
+        }
+
+        if (storedToken.IsExpired)
             throw new UnauthorizedAccessException("Refresh token inválido ou expirado.");
 
         storedToken.Revoke();
@@ -205,7 +216,6 @@ public class AuthService : IAuthService
             throw new KeyNotFoundException("Usuário não encontrado.");
 
         var roles = await _userManager.GetRolesAsync(user);
-
         var response = new UserResponse
         {
             Id = user.Id,

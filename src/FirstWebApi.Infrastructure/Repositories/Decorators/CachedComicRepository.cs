@@ -18,14 +18,10 @@ public class CachedComicRepository : IComicRepository
     }
 
     public async Task<List<Comic>> GetByUserIdAsync(Guid userId)
-    {
-        return await _inner.GetByUserIdAsync(userId);
-    }
+        => await _inner.GetByUserIdAsync(userId);
 
     public async Task<(List<Comic> Items, int TotalCount)> GetPaginatedByUserIdAsync(Guid userId, int page, int pageSize)
-    {
-        return await _inner.GetPaginatedByUserIdAsync(userId, page, pageSize);
-    }
+        => await _inner.GetPaginatedByUserIdAsync(userId, page, pageSize);
 
     public async Task<Comic?> GetByIdAsync(Guid id)
     {
@@ -46,20 +42,17 @@ public class CachedComicRepository : IComicRepository
     public async Task AddAsync(Comic comic)
     {
         await _inner.AddAsync(comic);
-        await _cache.RemoveAsync($"comics:user:{comic.UserId}");
     }
 
     public async Task UpdateAsync(Comic comic)
     {
         await _inner.UpdateAsync(comic);
-        await _cache.RemoveAsync($"comics:user:{comic.UserId}");
         await _cache.RemoveAsync($"comic:{comic.Id}");
     }
 
     public async Task DeleteAsync(Comic comic)
     {
         await _inner.DeleteAsync(comic);
-        await _cache.RemoveAsync($"comics:user:{comic.UserId}");
         await _cache.RemoveAsync($"comic:{comic.Id}");
     }
 }

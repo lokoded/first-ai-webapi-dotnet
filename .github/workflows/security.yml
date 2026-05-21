@@ -21,5 +21,12 @@ jobs:
       - name: Restore
         run: dotnet restore
 
+      - name: Trivy scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          severity: 'CRITICAL,HIGH'
+
       - name: Auditoria de vulnerabilidades
         run: dotnet list package --vulnerable --include-transitive 2>&1

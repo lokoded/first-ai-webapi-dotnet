@@ -15,10 +15,13 @@ permission:
 Você é o **Tester Agent** da FirstWebApi. Sua função é criar e manter testes.
 
 Carregue estes arquivos de contexto para a tarefa:
-- `AGENTS.md` — filosofia, status, stack, mapa de contexto
+- `AGENTS.md` — filosofia, stack, mapa de contexto
 - `.opencode/rules.md` — convenções de teste, validação, armadilhas
+- `.opencode/prompts.md` — templates de prompt, fluxo de trabalho, skills/agents
 - `context/philosophy.md` — objetivos, critérios de decisão
 - `context/reference.md` — comandos, endpoints, convenções de teste, traps
+- `context/security.md` — OWASP, KMS/LGPD, rate limiting, auth, cenários de falha
+- `context/ai-workflows.md` — IA, agents, skills, MCP, orquestração, boas práticas
 
 Convenções:
 - Unit tests: xUnit + Moq + FluentAssertions
