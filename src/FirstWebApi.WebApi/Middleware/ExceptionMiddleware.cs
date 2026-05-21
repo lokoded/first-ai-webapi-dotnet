@@ -38,7 +38,7 @@ public class ExceptionMiddleware
             UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "Não autorizado", exception.Message),
             KeyNotFoundException => (HttpStatusCode.NotFound, "Não encontrado", exception.Message),
             InvalidOperationException => (HttpStatusCode.Conflict, "Conflito", exception.Message),
-            ArgumentException => (HttpStatusCode.BadRequest, "Requisição inválida", exception.Message),
+            ArgumentException => (HttpStatusCode.BadRequest, "Requisição inválida", "A requisição contém dados inválidos."),
             _ => (HttpStatusCode.InternalServerError, "Erro interno", "Ocorreu um erro interno no servidor.")
         };
 

@@ -17,8 +17,10 @@ public class EnderecoInfo
     public bool IsEmpty =>
         string.IsNullOrEmpty(Logradouro) &&
         string.IsNullOrEmpty(Numero) &&
+        string.IsNullOrEmpty(Complemento) &&
         string.IsNullOrEmpty(Bairro) &&
         string.IsNullOrEmpty(Cidade) &&
         string.IsNullOrEmpty(Estado) &&
-        string.IsNullOrEmpty(Cep);
+        string.IsNullOrEmpty(Cep) &&
+        string.IsNullOrEmpty(Pais);
 }

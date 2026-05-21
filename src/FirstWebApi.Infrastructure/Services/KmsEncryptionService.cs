@@ -125,7 +125,7 @@ public class KmsEncryptionService : IEncryptionService
         var ciphertextBytes = new byte[plaintextBytes.Length];
         var tag = new byte[AesGcm.TagByteSizes.MaxSize]; // 16 bytes
 
-        using var aesGcm = new AesGcm(plaintextKeyBytes);
+        using var aesGcm = new AesGcm(plaintextKeyBytes, AesGcm.TagByteSizes.MaxSize);
         aesGcm.Encrypt(nonce, plaintextBytes, ciphertextBytes, tag);
 
         return (ciphertextBytes, nonce, tag, encryptedDataKeyBytes);
@@ -152,7 +152,7 @@ public class KmsEncryptionService : IEncryptionService
         }
 
         var plaintextBytes = new byte[ciphertext.Length];
-        using var aesGcm = new AesGcm(plaintextKey);
+        using var aesGcm = new AesGcm(plaintextKey!, AesGcm.TagByteSizes.MaxSize);
         aesGcm.Decrypt(iv, ciphertext, tag, plaintextBytes);
 
         return System.Text.Encoding.UTF8.GetString(plaintextBytes);

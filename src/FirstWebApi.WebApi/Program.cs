@@ -119,10 +119,12 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddPolicy("Auth", context =>
     {
+        var isTesting = builder.Environment.IsEnvironment("Testing");
+        var permitLimit = isTesting ? 1000 : 10;
         var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
         return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
         {
-            PermitLimit = 10,
+            PermitLimit = permitLimit,
             Window = TimeSpan.FromMinutes(1),
             QueueLimit = 0
         });
@@ -130,7 +132,8 @@ builder.Services.AddRateLimiter(options =>
 
     options.AddFixedWindowLimiter("Default", config =>
     {
-        config.PermitLimit = 100;
+        var isTesting = builder.Environment.IsEnvironment("Testing");
+        config.PermitLimit = isTesting ? 1000 : 100;
         config.Window = TimeSpan.FromMinutes(1);
         config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         config.QueueLimit = 0;

@@ -63,7 +63,6 @@ public class AuthService : IAuthService
         }
 
         await _userManager.AddToRoleAsync(user, "User");
-        user.SetRoleFromIdentity();
 
         if (!string.IsNullOrEmpty(request.Cpf))
         {

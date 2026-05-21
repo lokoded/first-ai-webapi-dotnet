@@ -14,20 +14,12 @@ public class ComicRepository : IComicRepository
         _context = context;
     }
 
-    public async Task<(List<Comic> Items, int TotalCount)> GetByUserIdAsync(Guid userId, int page, int pageSize)
+    public async Task<List<Comic>> GetByUserIdAsync(Guid userId)
     {
-        var query = _context.Comics
+        return await _context.Comics
             .Include(c => c.ComicType)
             .Where(c => c.UserId == userId)
-            .OrderByDescending(c => c.CreatedAt);
-
-        var totalCount = await query.CountAsync();
-        var items = await query
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
             .ToListAsync();
-
-        return (items, totalCount);
     }
 
     public async Task<(List<Comic> Items, int TotalCount)> GetPaginatedByUserIdAsync(Guid userId, int page, int pageSize)

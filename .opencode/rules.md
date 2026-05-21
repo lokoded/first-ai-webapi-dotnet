@@ -92,6 +92,12 @@ tests/
 - Rate limiting deve ser considerado em endpoints de auth
 - Refresh tokens para renovação segura de sessão
 
+## Workflow de Branches
+
+- Branches `feature/*`, `release/*` e `hotfix/*` devem ser deletadas local e remotamente após o merge da PR
+- Nunca manter branches merged localmente — `git branch -d` e `git push origin --delete`
+- Exceção: branches de longo prazo (`develop`, `main`)
+
 ## Workflow de Commits
 
 - Ao marcar um todo como `completed`, executar automaticamente:

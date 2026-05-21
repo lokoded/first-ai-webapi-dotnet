@@ -5,6 +5,9 @@ using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
 using Microsoft.AspNetCore.Mvc.Testing;
 using FluentAssertions;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Identity;
+using FirstWebApi.Domain.Entities;
 
 namespace FirstWebApi.IntegrationTests.Controllers;
 
@@ -114,5 +117,68 @@ public class ComicTypesControllerTests : IClassFixture<FirstWebApiFactory>
         var response = await _client.DeleteAsync($"/api/admin/comic-types/{Guid.NewGuid()}");
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
+    }
+
+    private async Task<string> RegisterAndGetAdminTokenAsync()
+    {
+        var email = $"admin_{Guid.NewGuid()}@email.com";
+        var register = new RegisterRequest
+        {
+            Nome = "Admin Test",
+            UserName = $"admin_{Guid.NewGuid():N}"[..20],
+            Email = email,
+            Senha = "SenhaForte123",
+            Cpf = "529.982.247-25"
+        };
+
+        var content = new StringContent(
+            JsonSerializer.Serialize(register),
+            Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("/api/auth/register", content);
+        response.EnsureSuccessStatusCode();
+
+        var body = await response.Content.ReadAsStringAsync();
+        var authResponse = JsonSerializer.Deserialize<AuthResponse>(body,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+            var user = await userManager.FindByEmailAsync(email);
+            if (user != null)
+            {
+                await userManager.AddToRoleAsync(user, "Admin");
+            }
+        }
+
+        var login = new LoginRequest { Email = email, Senha = "SenhaForte123" };
+        var loginContent = new StringContent(JsonSerializer.Serialize(login), Encoding.UTF8, "application/json");
+        var loginResponse = await _client.PostAsync("/api/auth/login", loginContent);
+        loginResponse.EnsureSuccessStatusCode();
+
+        var loginBody = await loginResponse.Content.ReadAsStringAsync();
+        var loginAuthResponse = JsonSerializer.Deserialize<AuthResponse>(loginBody,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        return loginAuthResponse!.Token;
+    }
+
+    [Fact]
+    public async Task AdminPostComicType_ComUsuarioAdmin_DeveRetornar201()
+    {
+        var token = await RegisterAndGetAdminTokenAsync();
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        var request = new ComicTypeRequest { Nome = $"Mangá_{Guid.NewGuid():N}"[..15] };
+
+        var content = new StringContent(
+            JsonSerializer.Serialize(request),
+            Encoding.UTF8, "application/json");
+
+        var response = await _client.PostAsync("/api/admin/comic-types", content);
+
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
     }
 }

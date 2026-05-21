@@ -29,8 +29,6 @@ public class User : IdentityUser<Guid>
         Email = email;
     }
 
-    public void SetRoleFromIdentity() => Role = EUserRole.User;
-
     public void SetCpfData(byte[] ciphertext, byte[] iv, byte[] tag, byte[] encryptedDataKey)
     {
         CpfCiphertext = ciphertext;

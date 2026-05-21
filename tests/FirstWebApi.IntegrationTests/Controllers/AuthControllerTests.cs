@@ -19,7 +19,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
 
     [Fact]
-    public async Task PostRegister_ComDadosValidos_DeveRetornar200()
+    public async Task PostRegister_ComDadosValidos_DeveRetornar201()
     {
         var request = new RegisterRequest
         {
@@ -37,9 +37,9 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
         var response = await _client.PostAsync("/api/auth/register", content);
 
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
-
         var body = await response.Content.ReadAsStringAsync();
+
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
         var authResponse = JsonSerializer.Deserialize<AuthResponse>(body,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
@@ -214,5 +214,78 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
         var response = await _client.PostAsync("/api/auth/register", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task PostRefresh_ComTokenValido_DeveRetornarNovosTokens()
+    {
+        var email = $"refresh_{Guid.NewGuid()}@email.com";
+        var register = new RegisterRequest
+        {
+            Nome = "Refresh Test",
+            UserName = $"ref_{Guid.NewGuid():N}"[..20],
+            Email = email,
+            Senha = "SenhaForte123",
+            Cpf = "529.982.247-25"
+        };
+        var registerContent = new StringContent(JsonSerializer.Serialize(register), Encoding.UTF8, "application/json");
+        var registerResponse = await _client.PostAsync("/api/auth/register", registerContent);
+        registerResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
+
+        var registerBody = await registerResponse.Content.ReadAsStringAsync();
+        var authResponse = JsonSerializer.Deserialize<AuthResponse>(registerBody,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        authResponse.Should().NotBeNull();
+        authResponse!.RefreshToken.Should().NotBeNullOrEmpty();
+
+        var refreshRequest = new RefreshTokenRequest { RefreshToken = authResponse.RefreshToken };
+        var refreshContent = new StringContent(JsonSerializer.Serialize(refreshRequest), Encoding.UTF8, "application/json");
+        var refreshResponse = await _client.PostAsync("/api/auth/refresh", refreshContent);
+
+        refreshResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+        
+        var refreshBody = await refreshResponse.Content.ReadAsStringAsync();
+        var newAuthResponse = JsonSerializer.Deserialize<AuthResponse>(refreshBody,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        newAuthResponse.Should().NotBeNull();
+        newAuthResponse!.Token.Should().NotBeNullOrEmpty();
+        newAuthResponse.RefreshToken.Should().NotBeNullOrEmpty();
+        newAuthResponse.RefreshToken.Should().NotBe(authResponse.RefreshToken);
+    }
+
+    [Fact]
+    public async Task PostRevoke_ComUsuarioAutenticado_DeveRevogarTokens()
+    {
+        var email = $"revoke_{Guid.NewGuid()}@email.com";
+        var register = new RegisterRequest
+        {
+            Nome = "Revoke Test",
+            UserName = $"rev_{Guid.NewGuid():N}"[..20],
+            Email = email,
+            Senha = "SenhaForte123",
+            Cpf = "529.982.247-25"
+        };
+        var registerContent = new StringContent(JsonSerializer.Serialize(register), Encoding.UTF8, "application/json");
+        var registerResponse = await _client.PostAsync("/api/auth/register", registerContent);
+        registerResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
+
+        var registerBody = await registerResponse.Content.ReadAsStringAsync();
+        var authResponse = JsonSerializer.Deserialize<AuthResponse>(registerBody,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        authResponse.Should().NotBeNull();
+
+        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
+
+        var response = await _client.PostAsync("/api/auth/revoke", null);
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
+
+        var refreshRequest = new RefreshTokenRequest { RefreshToken = authResponse.RefreshToken };
+        var refreshContent = new StringContent(JsonSerializer.Serialize(refreshRequest), Encoding.UTF8, "application/json");
+        var refreshResponse = await _client.PostAsync("/api/auth/refresh", refreshContent);
+
+        refreshResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
     }
 }

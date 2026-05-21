@@ -1,4 +1,5 @@
 using FirstWebApi.Application.DTOs.Request;
+using FirstWebApi.Application.DTOs.Response;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Application.Services;
 using FirstWebApi.Domain.Entities;
@@ -153,5 +154,128 @@ public class AuthServiceTests
         Func<Task> act = () => _authService.LoginAsync(request);
         await act.Should().ThrowAsync<UnauthorizedAccessException>()
             .WithMessage("Email ou senha inválidos.");
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_ComTokenValido_DeveRetornarNovoToken()
+    {
+        var user = new User("João", "joao_123", "joao@email.com");
+        var storedToken = new RefreshToken(user.Id, "token-hash", DateTime.UtcNow.AddDays(7));
+
+        _tokenServiceMock.Setup(t => t.HashToken(It.IsAny<string>()))
+            .Returns("token-hash");
+        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash"))
+            .ReturnsAsync(storedToken);
+        _userRepoMock.Setup(r => r.GetByIdAsync(user.Id))
+            .ReturnsAsync(user);
+        _tokenServiceMock.Setup(t => t.GenerateRefreshToken())
+            .Returns(("new-refresh-token", "new-hash"));
+        _tokenServiceMock.Setup(t => t.GenerateToken(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IList<string>>()))
+            .Returns("fake-jwt-token");
+        _userManagerMock.Setup(m => m.GetRolesAsync(It.IsAny<User>()))
+            .ReturnsAsync(["User"]);
+        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(1);
+
+        var result = await _authService.RefreshTokenAsync("valid-refresh-token");
+
+        result.Should().NotBeNull();
+        result.Token.Should().Be("fake-jwt-token");
+        result.RefreshToken.Should().Be("new-refresh-token");
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_ComTokenInexistente_DeveLancarExcecao()
+    {
+        _tokenServiceMock.Setup(t => t.HashToken(It.IsAny<string>()))
+            .Returns("invalid-hash");
+        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("invalid-hash"))
+            .ReturnsAsync((RefreshToken?)null);
+
+        Func<Task> act = () => _authService.RefreshTokenAsync("invalid-token");
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("Refresh token inválido ou expirado.");
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_ComTokenExpirado_DeveLancarExcecao()
+    {
+        var storedToken = new RefreshToken(Guid.NewGuid(), "token-hash", DateTime.UtcNow.AddDays(-1));
+
+        _tokenServiceMock.Setup(t => t.HashToken(It.IsAny<string>()))
+            .Returns("token-hash");
+        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash"))
+            .ReturnsAsync(storedToken);
+
+        Func<Task> act = () => _authService.RefreshTokenAsync("expired-token");
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("Refresh token inválido ou expirado.");
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_ComTokenRevogado_DeveLancarExcecao()
+    {
+        var storedToken = new RefreshToken(Guid.NewGuid(), "token-hash", DateTime.UtcNow.AddDays(7));
+        storedToken.Revoke();
+
+        _tokenServiceMock.Setup(t => t.HashToken(It.IsAny<string>()))
+            .Returns("token-hash");
+        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash"))
+            .ReturnsAsync(storedToken);
+        _refreshTokenRepoMock.Setup(r => r.GetActiveByUserIdAsync(It.IsAny<Guid>()))
+            .ReturnsAsync([]);
+        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(1);
+
+        Func<Task> act = () => _authService.RefreshTokenAsync("revoked-token");
+        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+            .WithMessage("Refresh token inválido ou expirado.");
+    }
+
+    [Fact]
+    public async Task RevokeRefreshTokensAsync_DeveRevogarTokensAtivos()
+    {
+        var userId = Guid.NewGuid();
+        var token1 = new RefreshToken(userId, "hash1", DateTime.UtcNow.AddDays(7));
+        var token2 = new RefreshToken(userId, "hash2", DateTime.UtcNow.AddDays(7));
+
+        _refreshTokenRepoMock.Setup(r => r.GetActiveByUserIdAsync(userId))
+            .ReturnsAsync([token1, token2]);
+        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(2);
+
+        await _authService.RevokeRefreshTokensAsync(userId);
+
+        token1.IsRevoked.Should().BeTrue();
+        token2.IsRevoked.Should().BeTrue();
+        _refreshTokenRepoMock.Verify(r => r.Update(token1), Times.Once);
+        _refreshTokenRepoMock.Verify(r => r.Update(token2), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(default), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetProfileAsync_ComUsuarioExistente_DeveRetornarProfile()
+    {
+        var userId = Guid.NewGuid();
+        var user = new User("João", "joao_123", "joao@email.com");
+
+        _userRepoMock.Setup(r => r.GetByIdAsync(userId))
+            .ReturnsAsync(user);
+        _userManagerMock.Setup(m => m.GetRolesAsync(user))
+            .ReturnsAsync(["User"]);
+
+        var result = await _authService.GetProfileAsync(userId);
+
+        result.Should().NotBeNull();
+        result.Nome.Should().Be("João");
+        result.Email.Should().Be("joao@email.com");
+    }
+
+    [Fact]
+    public async Task GetProfileAsync_ComUsuarioInexistente_DeveLancarExcecao()
+    {
+        _userRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
+            .ReturnsAsync((User?)null);
+
+        Func<Task> act = () => _authService.GetProfileAsync(Guid.NewGuid());
+        await act.Should().ThrowAsync<KeyNotFoundException>()
+            .WithMessage("Usuário não encontrado.");
     }
 }
