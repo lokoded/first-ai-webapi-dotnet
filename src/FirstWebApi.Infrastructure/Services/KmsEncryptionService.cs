@@ -22,7 +22,7 @@ public class KmsEncryptionService : IEncryptionService
     {
         _logger = logger;
         var kmsConfig = configuration.GetSection("Kms");
-        _keyId = kmsConfig["KeyId"] ?? throw new InvalidOperationException("KMS KeyId nao configurado.");
+        _keyId = kmsConfig["KeyId"] ?? throw new InvalidOperationException("KMS KeyId não configurado.");
 
         var endpoint = kmsConfig["Endpoint"];
         var useHttp = kmsConfig.GetValue<bool>("UseHttp");
@@ -67,7 +67,7 @@ public class KmsEncryptionService : IEncryptionService
                 _logger.LogInformation("Criando nova chave KMS: {KeyId}", _keyId);
                 var createResponse = await _kmsClient.CreateKeyAsync(new CreateKeyRequest
                 {
-                    Description = "Chave mestra para criptografia de dados sensiveis LGPD",
+                    Description = "Chave mestra para criptografia de dados sensíveis LGPD",
                     KeyUsage = KeyUsageType.ENCRYPT_DECRYPT,
                     KeySpec = KeySpec.SYMMETRIC_DEFAULT
                 });
@@ -83,12 +83,12 @@ public class KmsEncryptionService : IEncryptionService
             }
             else
             {
-                _logger.LogInformation("Chave KMS ja existe: {KeyId}", _keyId);
+                _logger.LogInformation("Chave KMS já existe: {KeyId}", _keyId);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Nao foi possivel inicializar a chave KMS. Verifique se o LocalStack esta rodando.");
+            _logger.LogWarning(ex, "Não foi possível inicializar a chave KMS. Verifique se o LocalStack está rodando.");
         }
     }
 
