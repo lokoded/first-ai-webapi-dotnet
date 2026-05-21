@@ -1,12 +1,524 @@
-# AGENTS.md — FirstWebApi
+# Contexto Persistente do Projeto
 
-> Contexto persistente do projeto. A IA carrega este arquivo para entender
-> o estado atual, decisões passadas e convenções do projeto.
-> Mantenha atualizado como "diário de bordo" do desenvolvimento.
+Este documento é a fonte principal de contexto do projeto.
 
-Web API .NET 10 em Clean Architecture para gerenciamento de coleção de HQs com criptografia LGPD (KMS), autenticação JWT, cache Redis e SQL Server.
+Nunca ignore, descarte, sobrescreva ou resuma excessivamente este contexto durante o desenvolvimento.
 
-## Stack Resumida (para consulta rápida da IA)
+Independentemente da sessão ou tarefa atual, todas as decisões técnicas, implementações e análises devem permanecer alinhadas às diretrizes definidas aqui.
+
+O objetivo é garantir continuidade de contexto, consistência arquitetural e padronização durante toda a evolução do projeto.
+
+---
+
+# Objetivo Principal
+
+Quero utilizar este projeto como ambiente de estudo prático para evoluir minhas habilidades como desenvolvedor Back-end .NET Pleno com foco em transição para nível Sênior.
+
+Também estou aprendendo sobre IA aplicada ao desenvolvimento, especialmente:
+- ferramentas CLI;
+- agentes;
+- automações;
+- skills;
+- gerenciamento de contexto;
+- engenharia de prompts;
+- organização de workflows orientados por IA;
+- OpenCode e ferramentas relacionadas.
+
+Atualmente sou iniciante nesses assuntos, então:
+- explique conceitos de forma didática;
+- mantenha linguagem técnica mas acessível;
+- utilize exemplos próximos de cenários reais;
+- explique trade-offs;
+- mostre boas práticas profissionais;
+- evite assumir conhecimento prévio avançado sobre IA aplicada ao desenvolvimento.
+
+---
+
+# Filosofia do Projeto
+
+O projeto deve seguir uma abordagem:
+- enxuta;
+- objetiva;
+- moderna;
+- profissional;
+- sustentável;
+- segura;
+- pragmática.
+
+Priorize:
+- boas práticas modernas;
+- simplicidade sustentável;
+- arquitetura clara;
+- código limpo;
+- legibilidade;
+- manutenção;
+- organização;
+- previsibilidade;
+- segurança desde o início;
+- decisões alinhadas ao mercado atual.
+
+Evite:
+- overengineering;
+- complexidade desnecessária;
+- padrões enterprise sem necessidade;
+- abstrações prematuras;
+- arquitetura excessivamente acadêmica.
+
+---
+
+# Critérios de Decisão Técnica
+
+Ao propor soluções técnicas, priorizar nesta ordem:
+
+1. Clareza
+2. Simplicidade
+3. Manutenibilidade
+4. Segurança
+5. Performance
+6. Escalabilidade
+7. Complexidade adicional somente quando justificada
+
+Evitar:
+- abstrações prematuras;
+- arquitetura especulativa;
+- dependências desnecessárias;
+- otimizações sem necessidade real;
+- padrões complexos sem ganho claro.
+
+---
+
+# Escopo e Complexidade Esperada
+
+Este projeto deve permanecer com complexidade compatível com:
+- aplicações reais de médio porte;
+- ambiente de estudo profissional;
+- nível Pleno/Sênior;
+- arquitetura sustentável para pequenos times.
+
+Evitar transformar o projeto em:
+- arquitetura enterprise excessiva;
+- laboratório de padrões desnecessários;
+- showcase acadêmico;
+- solução superdimensionada.
+
+Toda complexidade adicional deve possuir justificativa clara.
+
+---
+
+# Restrições Arquiteturais
+
+Não utilizar no projeto, salvo necessidade clara:
+- microservices;
+- event sourcing;
+- kubernetes;
+- mensageria complexa;
+- CQRS completo;
+- DDD estratégico avançado;
+- múltiplos bancos sem justificativa;
+- abstrações genéricas excessivas.
+
+Priorizar arquitetura monolítica modular simples.
+
+---
+
+# Objetivo Técnico do Projeto
+
+Construir uma Web API moderna utilizando:
+
+- C#
+- .NET 10
+- ASP.NET Core Web API
+- Docker
+- Docker Compose
+- Entity Framework Core
+- Redis
+- PostgreSQL ou SQL Server
+- GitHub Actions
+- GitHub
+- testes unitários;
+- testes de integração;
+- cobertura de código;
+- CI/CD;
+- LocalStack;
+- integração futura com AWS real.
+
+---
+
+# Organização da Solution
+
+A estrutura do projeto deve priorizar:
+- separação clara de responsabilidades;
+- baixo acoplamento;
+- alta legibilidade;
+- facilidade de navegação;
+- simplicidade de manutenção.
+
+Evitar:
+- excesso de projetos;
+- separações artificiais;
+- modularização prematura;
+- estruturas excessivamente enterprise.
+
+---
+
+# Requisitos Técnicos da API
+
+A API deve:
+
+- seguir princípios SOLID quando fizer sentido;
+- possuir separação clara de responsabilidades;
+- utilizar arquitetura simples e de fácil manutenção;
+- utilizar boas práticas modernas do ecossistema .NET;
+- utilizar injeção de dependência nativa do .NET;
+- possuir organização profissional de pastas e projetos;
+- utilizar logging estruturado;
+- possuir tratamento global de exceções;
+- possuir validação consistente de entrada;
+- utilizar configurações por ambiente;
+- estar preparada para execução via Docker;
+- possuir documentação via Swagger/OpenAPI;
+- utilizar `ProblemDetails` seguindo o padrão RFC 9457 para respostas de erro;
+- priorizar clareza de código e facilidade de manutenção.
+
+Sempre explicar:
+- decisões arquiteturais;
+- trade-offs;
+- vantagens e desvantagens das abordagens;
+- problemas que determinada solução resolve;
+- cenários reais de mercado relacionados.
+
+---
+
+# Segurança
+
+O projeto também possui como objetivo aprendizado prático de segurança aplicada em APIs modernas.
+
+Utilize o OWASP Top 10 como principal referência de segurança.
+
+Considere boas práticas relacionadas a:
+
+- autenticação;
+- autorização;
+- validação de entrada;
+- proteção contra injection;
+- gerenciamento seguro de secrets;
+- configuração segura de containers;
+- proteção de headers HTTP;
+- rate limiting;
+- logging seguro;
+- proteção de dados sensíveis;
+- tratamento seguro de erros;
+- práticas defensivas para APIs REST;
+- segurança em pipelines CI/CD;
+- segurança em containers;
+- segurança básica em cloud.
+
+Sempre explicar:
+- quais riscos estão sendo mitigados;
+- por que determinada prática é importante;
+- erros comuns que desenvolvedores cometem;
+- soluções mais utilizadas no mercado;
+- impacto de segurança das decisões técnicas.
+
+Evite soluções excessivamente complexas ou enterprise sem necessidade.
+
+---
+
+# Git e Estratégia de Versionamento
+
+O projeto utilizará Git como sistema oficial de versionamento.
+
+A estratégia de branches deve seguir Git Flow.
+
+Estrutura esperada:
+- `main` → produção;
+- `develop` → integração contínua;
+- `feature/*` → funcionalidades;
+- `release/*` → preparação de releases;
+- `hotfix/*` → correções urgentes.
+
+Considere:
+- boas práticas de commits;
+- padronização de commits;
+- pull requests;
+- revisão de código;
+- rastreabilidade;
+- organização profissional de branches;
+- versionamento semântico quando aplicável.
+
+Sempre explicar:
+- vantagens e desvantagens do Git Flow;
+- cenários reais de uso;
+- erros comuns;
+- fluxo profissional utilizado no mercado.
+
+---
+
+# Qualidade de Código e Testes
+
+O projeto deve priorizar:
+- qualidade;
+- previsibilidade;
+- legibilidade;
+- manutenção;
+- confiabilidade.
+
+O projeto deve conter:
+- testes unitários;
+- testes de integração;
+- cobertura de código;
+- testes de cenários de sucesso;
+- testes de cenários de falha;
+- testes de segurança básicos quando aplicável;
+- ambiente reproduzível via Docker quando necessário.
+
+A cobertura de testes deve ser utilizada como indicador de qualidade, mas sem incentivar testes artificiais apenas para aumentar métricas.
+
+Priorizar:
+- testes úteis;
+- testes legíveis;
+- regras de negócio;
+- cenários críticos;
+- prevenção de regressão;
+- confiabilidade da aplicação.
+
+Sempre explicar:
+- estratégias de testes;
+- ferramentas utilizadas;
+- integração da cobertura no CI/CD;
+- métricas realmente importantes em ambientes profissionais.
+
+---
+
+# DevOps e CI/CD
+
+Utilizar GitHub Actions para:
+- build;
+- execução de testes;
+- validação da aplicação;
+- análise básica de qualidade;
+- cobertura de testes;
+- pipelines simples e profissionais.
+
+Também considerar:
+- variáveis de ambiente;
+- GitHub Secrets;
+- separação entre ambientes;
+- boas práticas básicas de CI/CD;
+- pipelines reproduzíveis;
+- segurança no pipeline.
+
+Sempre explicar:
+- propósito de cada etapa;
+- impacto no fluxo profissional;
+- simplificações feitas para aprendizado;
+- possíveis evoluções futuras.
+
+---
+
+# LocalStack e AWS
+
+Durante o desenvolvimento local, utilizar LocalStack para simular serviços AWS localmente.
+
+Objetivos:
+- reduzir custos;
+- facilitar desenvolvimento local;
+- melhorar produtividade;
+- permitir testes locais;
+- aproximar o ambiente local de cenários reais de cloud;
+- criar ambiente reproduzível.
+
+Considere:
+- Docker Compose;
+- variáveis de ambiente;
+- separação de ambientes;
+- configuração de credenciais;
+- abstração de infraestrutura;
+- integração local reproduzível.
+
+Em produção ou homologação:
+- utilizar serviços reais da AWS;
+- utilizar conexões reais da AWS;
+- utilizar gerenciamento seguro de credenciais;
+- nunca expor secrets no código.
+
+Sempre explicar:
+- diferenças entre LocalStack e AWS real;
+- limitações do ambiente local;
+- boas práticas de cloud;
+- estratégias profissionais utilizadas no mercado;
+- impacto financeiro e operacional dos recursos AWS.
+
+---
+
+# Aprendizado com IA, Agents e OpenCode
+
+Este projeto também será utilizado como ambiente de aprendizado prático sobre desenvolvimento assistido por IA.
+
+Considere que atualmente não possuo conhecimento sobre:
+- agents;
+- skills;
+- gerenciamento de contexto;
+- MCP;
+- arquivos de ferramentas;
+- engenharia de contexto;
+- estratégias de consumo eficiente de tokens;
+- automações CLI com IA;
+- organização profissional de workflows orientados por IA.
+
+---
+
+# Estrutura de IA do Projeto
+
+Durante o projeto, explicar como criar e organizar:
+
+- Arquivos de Configuração de Agentes;
+- Definição de Skills/Habilidades;
+- Arquivos de Contexto;
+- Regras do Projeto;
+- Configuração de Ferramentas/APIs;
+- MCPs;
+- Tool Files;
+- prompts reutilizáveis;
+- memória e contexto persistente;
+- workflows orientados por IA;
+- automações reutilizáveis;
+- estratégias de orquestração de agentes.
+
+Sempre mostrar:
+- organização profissional;
+- estrutura de pastas;
+- responsabilidades;
+- boas práticas;
+- cenários reais.
+
+---
+
+# Boas Práticas com IA
+
+Ensinar:
+- como reduzir consumo de tokens sem perder qualidade;
+- como evitar contexto desnecessário;
+- como estruturar prompts eficientes;
+- como dividir responsabilidades entre agentes;
+- como melhorar previsibilidade das respostas;
+- como manter consistência arquitetural utilizando IA;
+- como evitar alucinações e inconsistências;
+- como criar workflows reutilizáveis;
+- como reduzir custo computacional mantendo qualidade;
+- como organizar contexto de longo prazo.
+
+Sempre priorizar:
+- clareza;
+- previsibilidade;
+- manutenção;
+- reaproveitamento;
+- organização;
+- custo-benefício.
+
+---
+
+# Diretriz de Explicações
+
+Priorizar respostas objetivas e práticas.
+
+Explicações detalhadas devem ocorrer principalmente:
+- em decisões arquiteturais importantes;
+- conceitos avançados;
+- temas de segurança;
+- integrações complexas;
+- práticas pouco conhecidas;
+- trade-offs relevantes.
+
+Evitar explicações excessivas para:
+- conceitos básicos;
+- código autoexplicativo;
+- padrões já estabelecidos no projeto.
+
+---
+
+# Padrão Esperado das Respostas
+
+Sempre que possível:
+1. explicar rapidamente o objetivo;
+2. justificar decisões importantes;
+3. mostrar implementação prática;
+4. apontar riscos ou trade-offs;
+5. sugerir possíveis evoluções futuras.
+
+Priorizar:
+- respostas organizadas;
+- exemplos reais;
+- clareza técnica;
+- código pronto para produção quando aplicável.
+
+---
+
+# Evolução Progressiva do Projeto
+
+O projeto deve evoluir de forma incremental e progressiva.
+
+Priorizar primeiro:
+1. estrutura base da API;
+2. arquitetura inicial;
+3. persistência de dados;
+4. validações;
+5. tratamento de erros;
+6. testes;
+7. Docker;
+8. CI/CD;
+9. Redis;
+10. segurança;
+11. cloud;
+12. automações com IA;
+13. agents e workflows avançados.
+
+Evitar introduzir:
+- múltiplos conceitos complexos simultaneamente;
+- infraestrutura avançada cedo demais;
+- automações antes da base estar estável.
+
+---
+
+# Objetivo do Aprendizado com IA
+
+O foco é aprender:
+- uso profissional de IA no desenvolvimento;
+- produtividade com agentes;
+- automação de tarefas técnicas;
+- geração consistente de código;
+- manutenção de contexto técnico;
+- engenharia de prompts;
+- workflows orientados por IA;
+- organização de projetos integrados com IA;
+- integração entre desenvolvimento .NET e ferramentas modernas de IA.
+
+---
+
+# Contexto Geral do Projeto
+
+Considere que este projeto é simultaneamente:
+- um ambiente de estudo;
+- um laboratório prático;
+- um projeto de evolução profissional;
+- um treinamento para mercado moderno .NET;
+- um ambiente de aprendizado de DevOps;
+- um ambiente de aprendizado de segurança;
+- um ambiente de aprendizado de IA aplicada ao desenvolvimento.
+
+Priorize sempre:
+- clareza;
+- objetividade;
+- qualidade profissional;
+- simplicidade sustentável;
+- aprendizado progressivo;
+- exemplos reais;
+- boas práticas modernas;
+- decisões alinhadas ao mercado atual.
+
+---
+
+# Stack Resumida (para consulta rápida da IA)
 
 ```
 .NET 10 | EF Core + SQL Server | Redis | JWT | KMS | FluentValidation | xUnit + Moq
