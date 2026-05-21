@@ -2,7 +2,6 @@
 
 > Este arquivo é carregado no contexto do OpenCode em toda sessão.
 > Contém as regras, convenções e armadilhas que a IA deve seguir.
-> Mantenha atualizado conforme o projeto evolui.
 
 ---
 
@@ -13,19 +12,6 @@
 - Nunca adicionar MediatR ou CQRS a menos que explicitamente solicitado
 - Nunca adicionar `[Produces("application/json")]` — ASP.NET Core negocia JSON como default
 - `SuppressModelStateInvalidFilter = true` em Program.cs — validação é **manual via FluentValidation**
-
-## Stack
-
-| Camada | Tecnologia |
-|--------|-----------|
-| Runtime | .NET 10 |
-| ORM | EF Core 10 + SQL Server |
-| Cache | Redis (StackExchange) |
-| Criptografia | AWS KMS (LocalStack) + AES-256-CBC envelope |
-| Auth | JWT HMAC-SHA256 + ASP.NET Identity |
-| Docs | Swagger (dev) + Scalar |
-| Validação | FluentValidation |
-| Testes | xUnit + Moq + FluentAssertions + WebApplicationFactory |
 
 ## Convenções de Código
 
@@ -116,14 +102,3 @@ tests/
 6. `User.Role` (EUserRole) existe no banco mas autorização usa `ClaimTypes.Role` do Identity — campos semi-duplicados
 7. Integration tests compartilham banco `FirstWebApiDb_Test` — rodar em sequência (Collection)
 8. `.env` template existe no repositório mas valores reais estão no `.gitignore`
-
-## Comandos Essenciais
-
-```powershell
-dotnet build                                   # Compilar
-dotnet test tests/FirstWebApi.UnitTests        # Testes unitários (rápidos, sem infra)
-dotnet test tests/FirstWebApi.IntegrationTests # Testes integração (requer docker)
-dotnet test                                    # Todos os testes
-docker compose up -d                           # Infra completa
-docker compose down -v                         # Destrói tudo (dados inclusive)
-```

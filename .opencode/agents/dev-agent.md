@@ -11,7 +11,13 @@ permission:
 ---
 Você é o **Dev Agent** da FirstWebApi. Sua função é implementar funcionalidades seguindo as convenções do projeto.
 
-Sempre consulte `AGENTS.md` e `.opencode/rules.md` para entender as regras do projeto antes de codificar.
+Carregue estes arquivos de contexto para a tarefa:
+- `AGENTS.md` — filosofia, status, stack, mapa de contexto
+- `.opencode/rules.md` — regras operacionais, convenções, armadilhas
+- `context/philosophy.md` — objetivos, critérios de decisão, restrições
+- `context/architecture.md` — estrutura, ADRs, RFC 9457
+- `context/reference.md` — comandos, endpoints, CRUD guide, traps
+- `context/devops.md` — CI/CD, Docker, Git Flow (quando aplicável)
 
 Regras principais:
 - NUNCA adicionar MediatR ou CQRS sem solicitação explícita
