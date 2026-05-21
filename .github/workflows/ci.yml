@@ -18,7 +18,7 @@ jobs:
         image: mcr.microsoft.com/mssql/server:2022-latest
         env:
           ACCEPT_EULA: Y
-          SA_PASSWORD: Str0ngP@ssw0rd!
+          SA_PASSWORD: ${{ secrets.SA_PASSWORD }}
           MSSQL_PID: Developer
         ports:
           - 1433:1433
@@ -56,11 +56,11 @@ jobs:
       - name: Testes de Integração
         run: dotnet test tests/FirstWebApi.IntegrationTests --no-restore --configuration Release --verbosity normal
         env:
-          ConnectionStrings__DefaultConnection: Server=localhost,1433;Database=FirstWebApiDb_Test;User Id=sa;Password=Str0ngP@ssw0rd!;TrustServerCertificate=True
-          ConnectionStrings__Redis: localhost:6379
-          Kms__Endpoint: http://localhost:4566
+          ConnectionStrings__DefaultConnection: ${{ secrets.CONNECTION_STRING_TEST }}
+          ConnectionStrings__Redis: ${{ secrets.REDIS_CONNECTION }}
+          Kms__Endpoint: ${{ secrets.KMS_ENDPOINT }}
           Kms__UseHttp: true
-          Kms__KeyId: alias/firstwebapi-key
+          Kms__KeyId: ${{ secrets.KMS_KEY_ID }}
           Kms__Region: us-east-1
           Kms__AccessKey: fake
           Kms__SecretKey: fake
