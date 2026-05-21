@@ -23,17 +23,11 @@ public class ComicService : IComicService
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        var allComics = await _comicRepository.GetByUserIdAsync(userId);
-        var totalCount = allComics.Count;
-        var items = allComics
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .Select(MapToResponse)
-            .ToList();
+        var (items, totalCount) = await _comicRepository.GetPaginatedByUserIdAsync(userId, page, pageSize);
 
         return new PaginatedResult<ComicResponse>
         {
-            Items = items,
+            Items = items.Select(MapToResponse).ToList(),
             TotalCount = totalCount,
             Page = page,
             PageSize = pageSize
@@ -53,8 +47,7 @@ public class ComicService : IComicService
         var comic = new Comic(request.Titulo, request.WebUrl, userId, request.ComicTypeId, request.Observacao);
         await _comicRepository.AddAsync(comic);
         await _unitOfWork.SaveChangesAsync();
-        var saved = await _comicRepository.GetByIdAsync(comic.Id);
-        return MapToResponse(saved!);
+        return MapToResponse(comic);
     }
 
     public async Task<ComicResponse?> UpdateAsync(Guid id, ComicRequest request, Guid userId)
@@ -64,10 +57,8 @@ public class ComicService : IComicService
             return null;
 
         comic.Update(request.Titulo, request.WebUrl, request.ComicTypeId, request.Observacao);
-        await _comicRepository.UpdateAsync(comic);
         await _unitOfWork.SaveChangesAsync();
-        var saved = await _comicRepository.GetByIdAsync(comic.Id);
-        return MapToResponse(saved!);
+        return MapToResponse(comic);
     }
 
     public async Task<bool> DeleteAsync(Guid id, Guid userId)
