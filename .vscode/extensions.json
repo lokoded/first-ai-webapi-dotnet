@@ -1,0 +1,15 @@
+{
+  "recommendations": [
+    "ms-dotnettools.csharp",
+    "ms-dotnettools.csdevkit",
+    "ms-dotnettools.vscode-dotnet-pack",
+    "sonarsource.sonarlint-vscode",
+    "EditorConfig.EditorConfig",
+    "ms-azuretools.vscode-docker",
+    "github.vscode-github-actions",
+    "codium.codium",
+    "ryanluker.vscode-coverage-gutters",
+    "formulahendry.dotnet-test-explorer",
+    "humao.rest-client"
+  ]
+}

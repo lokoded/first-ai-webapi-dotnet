@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/FirstWebApi.Application/FirstWebApi.Application.csproj" />
+    <Project Path="src/FirstWebApi.Domain/FirstWebApi.Domain.csproj" />
+    <Project Path="src/FirstWebApi.Infrastructure/FirstWebApi.Infrastructure.csproj" />
+    <Project Path="src/FirstWebApi.WebApi/FirstWebApi.WebApi.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/FirstWebApi.IntegrationTests/FirstWebApi.IntegrationTests.csproj" />
+    <Project Path="tests/FirstWebApi.UnitTests/FirstWebApi.UnitTests.csproj" />
+  </Folder>
+</Solution>

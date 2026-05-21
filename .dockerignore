@@ -1,0 +1,41 @@
+# ─────────────────────────────────────────────────────────────
+#  .dockerignore
+#  ─────────────────────────────────────────────────────────────
+#  Define arquivos/diretórios que NÃO serão copiados para o
+#  contexto do build Docker. Reduz o tamanho do contexto e
+#  melhora a performance do build.
+#  Funciona como .gitignore, mas para o Docker.
+# ─────────────────────────────────────────────────────────────
+
+# .NET
+**/bin/
+**/obj/
+*.user
+*.suo
+
+# Node (se houver frontend)
+node_modules/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Git
+.git/
+.gitignore
+
+# Docker
+docker-compose*.yml
+.dockerignore
+
+# Logs
+logs/
+
+# Environment
+.env

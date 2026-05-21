@@ -1,0 +1,76 @@
+# EditorConfig: consistência entre editores/IDEs
+# https://editorconfig.org
+
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+indent_size = 4
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,csx}]
+indent_size = 4
+indent_style = space
+
+[*.{json,jsonc,xml,yml,yaml}]
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+
+[*.sh]
+end_of_line = lf
+
+[*.ps1]
+end_of_line = crlf
+
+# Regras específicas para .NET
+[*.cs]
+# ReSharper / .NET naming conventions
+dotnet_naming_rule.private_fields_rule.symbols = private_fields
+dotnet_naming_rule.private_fields_rule.style = _underscore_prefix
+dotnet_naming_rule.private_fields_rule.severity = warning
+
+dotnet_naming_symbols.private_fields.applicable_kinds = field
+dotnet_naming_symbols.private_fields.applicable_accessibilities = private
+
+dotnet_naming_style._underscore_prefix.required_prefix = _
+dotnet_naming_style._underscore_prefix.capitalization = camel_case
+
+# Imports dentro do namespace (BSD-style)
+dotnet_sort_system_directives_first = true
+dotnet_style_qualification_for_event = false
+dotnet_style_qualification_for_field = false
+dotnet_style_qualification_for_method = false
+dotnet_style_qualification_for_property = false
+
+# Preferir var implícito
+csharp_style_var_for_built_in_types = true:warning
+csharp_style_var_when_type_is_apparent = true:warning
+csharp_style_var_elsewhere = true:warning
+
+# Preferir expression-bodied members
+csharp_style_expression_bodied_methods = true:silent
+csharp_style_expression_bodied_properties = true:silent
+csharp_style_expression_bodied_indexers = true:silent
+csharp_style_expression_bodied_accessors = true:silent
+csharp_style_expression_bodied_lambdas = true:silent
+csharp_style_expression_bodied_local_functions = true:silent
+
+# Null checking moderna
+csharp_style_throw_expression = true:warning
+csharp_style_pattern_matching_over_is_with_cast_check = true:warning
+csharp_style_pattern_matching_over_as_with_null_check = true:warning
+csharp_style_inlined_variable_declaration = true:warning
+
+# Preferir primary constructors (C# 12+)
+csharp_style_prefer_primary_constructors = true:silent
+
+# Implicit usings (global usings no .csproj)
+csharp_using_directive_placement = outside_namespace:silent
+
+# File-scoped namespaces (C# 10+)
+csharp_namespace_style = file_scoped:warning

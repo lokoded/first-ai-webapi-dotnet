@@ -1,0 +1,25 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // Instruções extras carregadas no contexto da IA
+  "instructions": [
+    ".opencode/rules.md",
+    "AGENTS.md"
+  ],
+
+  // Configuração de agentes especializados
+  "agent": {
+    "dev-agent": {
+      "description": "Desenvolvimento geral da FirstWebApi — .NET 10, Clean Architecture, C#",
+      "mode": "subagent"
+    },
+    "tester": {
+      "description": "Escrever e executar testes (xUnit, Moq, FluentAssertions) na FirstWebApi",
+      "mode": "subagent"
+    },
+    "security-reviewer": {
+      "description": "Revisar código contra OWASP Top 10 e boas práticas de segurança em APIs .NET",
+      "mode": "subagent"
+    }
+  }
+}
