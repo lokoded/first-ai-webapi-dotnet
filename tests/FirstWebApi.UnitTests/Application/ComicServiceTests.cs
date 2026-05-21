@@ -31,7 +31,8 @@ public class ComicServiceTests
             new("Superman", "https://exemplo.com/superman", _userId, _comicTypeId)
         };
 
-        _comicRepoMock.Setup(r => r.GetByUserIdAsync(_userId)).ReturnsAsync(comics);
+        _comicRepoMock.Setup(r => r.GetPaginatedByUserIdAsync(_userId, 1, 20))
+            .ReturnsAsync((comics, comics.Count));
 
         var result = await _comicService.GetAllAsync(_userId);
 
@@ -111,7 +112,7 @@ public class ComicServiceTests
 
         result.Should().NotBeNull();
         result!.Titulo.Should().Be("Batman 2024");
-        _comicRepoMock.Verify(r => r.UpdateAsync(It.IsAny<Comic>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(default), Times.Once);
     }
 
     [Fact]

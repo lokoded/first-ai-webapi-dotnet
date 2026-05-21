@@ -1,9 +1,9 @@
-using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using Amazon;
 using Amazon.KeyManagementService;
 using Amazon.KeyManagementService.Model;
 using FirstWebApi.Application.Interfaces;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -14,15 +14,17 @@ public class KmsEncryptionService : IEncryptionService
     private readonly IAmazonKeyManagementService _kmsClient;
     private readonly string _keyId;
     private readonly ILogger<KmsEncryptionService> _logger;
-    private static readonly ConcurrentDictionary<string, byte[]> DataKeyCache = new();
-    private static readonly TimeSpan CacheExpiry = TimeSpan.FromMinutes(15);
-    private static DateTime _lastCacheCleanup = DateTime.UtcNow;
+    private readonly IMemoryCache _cache;
+    private static readonly TimeSpan CacheSlidingExpiry = TimeSpan.FromMinutes(15);
+    private static readonly TimeSpan CacheAbsoluteExpiry = TimeSpan.FromHours(1);
+    private readonly Lazy<Task> _initialization;
 
-    public KmsEncryptionService(IConfiguration configuration, ILogger<KmsEncryptionService> logger)
+    public KmsEncryptionService(IConfiguration configuration, ILogger<KmsEncryptionService> logger, IMemoryCache memoryCache)
     {
         _logger = logger;
+        _cache = memoryCache;
         var kmsConfig = configuration.GetSection("Kms");
-        _keyId = kmsConfig["KeyId"] ?? throw new InvalidOperationException("KMS KeyId nao configurado.");
+        _keyId = kmsConfig["KeyId"] ?? throw new InvalidOperationException("KMS KeyId não configurado.");
 
         var endpoint = kmsConfig["Endpoint"];
         var useHttp = kmsConfig.GetValue<bool>("UseHttp");
@@ -51,7 +53,12 @@ public class KmsEncryptionService : IEncryptionService
             _kmsClient = new AmazonKeyManagementServiceClient(config);
         }
 
-        InitializeKeyAsync().GetAwaiter().GetResult();
+        _initialization = new Lazy<Task>(InitializeKeyAsync);
+    }
+
+    private async Task EnsureInitializedAsync()
+    {
+        await _initialization.Value;
     }
 
     private async Task InitializeKeyAsync()
@@ -67,7 +74,7 @@ public class KmsEncryptionService : IEncryptionService
                 _logger.LogInformation("Criando nova chave KMS: {KeyId}", _keyId);
                 var createResponse = await _kmsClient.CreateKeyAsync(new CreateKeyRequest
                 {
-                    Description = "Chave mestra para criptografia de dados sensiveis LGPD",
+                    Description = "Chave mestra para criptografia de dados sensíveis LGPD",
                     KeyUsage = KeyUsageType.ENCRYPT_DECRYPT,
                     KeySpec = KeySpec.SYMMETRIC_DEFAULT
                 });
@@ -83,17 +90,18 @@ public class KmsEncryptionService : IEncryptionService
             }
             else
             {
-                _logger.LogInformation("Chave KMS ja existe: {KeyId}", _keyId);
+                _logger.LogInformation("Chave KMS já existe: {KeyId}", _keyId);
             }
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Nao foi possivel inicializar a chave KMS. Verifique se o LocalStack esta rodando.");
+            _logger.LogWarning(ex, "Não foi possível inicializar a chave KMS. Verifique se o LocalStack está rodando.");
         }
     }
 
     public async Task<(byte[] ciphertext, byte[] iv, byte[] tag, byte[] encryptedDataKey)> EncryptAsync(string plaintext)
     {
+        await EnsureInitializedAsync();
         var dataKeyResponse = await _kmsClient.GenerateDataKeyAsync(new GenerateDataKeyRequest
         {
             KeyId = _keyId,
@@ -104,30 +112,31 @@ public class KmsEncryptionService : IEncryptionService
         var encryptedDataKeyBytes = dataKeyResponse.CiphertextBlob.ToArray();
 
         var cacheKey = Convert.ToBase64String(encryptedDataKeyBytes);
-        DataKeyCache[cacheKey] = plaintextKeyBytes;
+        _cache.Set(cacheKey, plaintextKeyBytes, new MemoryCacheEntryOptions
+        {
+            SlidingExpiration = CacheSlidingExpiry,
+            AbsoluteExpirationRelativeToNow = CacheAbsoluteExpiry
+        });
 
         var plaintextBytes = System.Text.Encoding.UTF8.GetBytes(plaintext);
-        using var aes = Aes.Create();
-        aes.KeySize = 256;
-        aes.Key = plaintextKeyBytes;
-        aes.GenerateIV();
+        var nonce = new byte[AesGcm.NonceByteSizes.MaxSize]; // 12 bytes
+        RandomNumberGenerator.Fill(nonce);
 
-        using var encryptor = aes.CreateEncryptor();
-        var ciphertextBytes = encryptor.TransformFinalBlock(plaintextBytes, 0, plaintextBytes.Length);
+        var ciphertextBytes = new byte[plaintextBytes.Length];
+        var tag = new byte[AesGcm.TagByteSizes.MaxSize]; // 16 bytes
 
-        var iv = aes.IV;
-        var tag = Array.Empty<byte>();
+        using var aesGcm = new AesGcm(plaintextKeyBytes, AesGcm.TagByteSizes.MaxSize);
+        aesGcm.Encrypt(nonce, plaintextBytes, ciphertextBytes, tag);
 
-        CleanCache();
-
-        return (ciphertextBytes, iv, tag, encryptedDataKeyBytes);
+        return (ciphertextBytes, nonce, tag, encryptedDataKeyBytes);
     }
 
     public async Task<string> DecryptAsync(byte[] ciphertext, byte[] iv, byte[] tag, byte[] encryptedDataKey)
     {
+        await EnsureInitializedAsync();
         var cacheKey = Convert.ToBase64String(encryptedDataKey);
 
-        if (!DataKeyCache.TryGetValue(cacheKey, out var plaintextKey))
+        if (!_cache.TryGetValue(cacheKey, out byte[]? plaintextKey))
         {
             var decryptResponse = await _kmsClient.DecryptAsync(new DecryptRequest
             {
@@ -135,28 +144,17 @@ public class KmsEncryptionService : IEncryptionService
                 KeyId = _keyId
             });
             plaintextKey = decryptResponse.Plaintext.ToArray();
-            DataKeyCache[cacheKey] = plaintextKey;
+            _cache.Set(cacheKey, plaintextKey, new MemoryCacheEntryOptions
+            {
+                SlidingExpiration = CacheSlidingExpiry,
+                AbsoluteExpirationRelativeToNow = CacheAbsoluteExpiry
+            });
         }
 
-        using var aes = Aes.Create();
-        aes.KeySize = 256;
-        aes.Key = plaintextKey;
-        aes.IV = iv;
-
-        using var decryptor = aes.CreateDecryptor();
-        var plaintextBytes = decryptor.TransformFinalBlock(ciphertext, 0, ciphertext.Length);
-
-        CleanCache();
+        var plaintextBytes = new byte[ciphertext.Length];
+        using var aesGcm = new AesGcm(plaintextKey!, AesGcm.TagByteSizes.MaxSize);
+        aesGcm.Decrypt(iv, ciphertext, tag, plaintextBytes);
 
         return System.Text.Encoding.UTF8.GetString(plaintextBytes);
-    }
-
-    private void CleanCache()
-    {
-        if (DateTime.UtcNow - _lastCacheCleanup > CacheExpiry)
-        {
-            _lastCacheCleanup = DateTime.UtcNow;
-            DataKeyCache.Clear();
-        }
     }
 }

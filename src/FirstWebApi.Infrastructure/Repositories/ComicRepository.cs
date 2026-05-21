@@ -19,8 +19,25 @@ public class ComicRepository : IComicRepository
         return await _context.Comics
             .Include(c => c.ComicType)
             .Where(c => c.UserId == userId)
-            .OrderByDescending(c => c.CreatedAt)
             .ToListAsync();
+    }
+
+    public async Task<(List<Comic> Items, int TotalCount)> GetPaginatedByUserIdAsync(Guid userId, int page, int pageSize)
+    {
+        var query = _context.Comics
+            .Include(c => c.ComicType)
+            .Where(c => c.UserId == userId);
+
+        var totalCount = await query.CountAsync();
+
+        var items = await query
+            .OrderByDescending(c => c.CreatedAt)
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .AsNoTracking()
+            .ToListAsync();
+
+        return (items, totalCount);
     }
 
     public async Task<Comic?> GetByIdAsync(Guid id)

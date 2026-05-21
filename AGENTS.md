@@ -12,14 +12,6 @@ Todas as decisões técnicas, implementações e análises devem permanecer alin
 .NET 10 | EF Core + SQL Server | Redis | JWT | KMS | FluentValidation | xUnit + Moq
 ```
 
-## Status Atual
-
-- Build: ✅ 0 erros, 0 warnings
-- Testes unitários: ✅ 35/35
-- Testes de integração: ✅ 21/21 (Docker Compose rodando)
-- GitHub Actions: ✅ CI + Security Scan
-- Módulo atual: 3 (CI/CD)
-
 ---
 
 # Filosofia do Projeto
@@ -68,5 +60,4 @@ Conteúdo especializado foi extraído para `context/`. Carregue o arquivo releva
 | `context/security.md` | OWASP Top 10, KMS/LGPD, Rate Limiting, Refresh Tokens, Security Headers, Account Lockout, CORS | security-reviewer |
 | `context/devops.md` | Git Flow, CI/CD (GitHub Actions), LocalStack/AWS, Docker | dev-agent |
 | `context/ai-workflows.md` | Aprendizado com IA, OpenCode, Agents, Skills, MCP, Prompts, Boas Práticas | Todos (quando aplicável) |
-| `context/aprendizado.md` | Diário de Aprendizado (Módulos 0-3) | Todos (consulta histórica) |
 | `context/reference.md` | Comandos, API Endpoints, Peculiaridades e Armadilhas, CRUD guide, Convenções de Teste | dev-agent, tester |

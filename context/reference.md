@@ -13,14 +13,14 @@ dotnet build
 # Rodar API localmente (porta 5043 via launchSettings)
 dotnet run --project src/FirstWebApi.WebApi
 
-# Testes unitários (sem infra necessária)
+# Testes (unitários + integração) — requer docker compose up -d
+dotnet test
+
+# Testes unitários apenas (sem infra necessária)
 dotnet test tests/FirstWebApi.UnitTests
 
 # Testes de integração (requer docker compose up -d primeiro)
 dotnet test tests/FirstWebApi.IntegrationTests
-
-# Todos os testes
-dotnet test
 
 # Migrations do EF
 dotnet ef migrations add <Name> --project src/FirstWebApi.Infrastructure --startup-project src/FirstWebApi.WebApi
@@ -66,6 +66,7 @@ dotnet ef migrations script <De> <Para> --idempotent -o scripts/rollback.sql
 - **KMS encryption** (`KmsEncryptionService`) chama `InitializeKeyAsync().GetAwaiter().GetResult()` no construtor. Vai travar se o LocalStack não estiver rodando. O serviço cria a chave KMS automaticamente se não existir.
 - **Redis caching** via decorators do Scrutor (`CachedComicRepository`, etc.) — registrados em `Program.cs:83-86`. Padrão cache-aside.
 - **Testes de integração** usam `WebApplicationFactory<Program>` com `builder.UseSetting("Environment", "Testing")` para carregar `appsettings.Testing.json`. Todos os testes que dependem de banco estão em `[Collection("Database")]` (sequenciais, banco compartilhado `FirstWebApiDb_Test`).
+- **`appsettings.Testing.json`** contém credenciais de desenvolvimento (banco local Docker) versionadas — CI sobrescreve com `secrets.*`. As credenciais só funcionam no container Docker local.
 - **`.env` está no .gitignore** — criar a partir do template em `.env` (contém `SA_PASSWORD`, `CONNECTION_STRING`, `LOCALSTACK_AUTH_TOKEN`). LocalStack v4+ exige um auth token gratuito.
 - **Português brasileiro** nas strings voltadas ao usuário (mensagens de erro, validação), inglês nos identificadores do código.
 - **Health endpoint**: `GET /health` retorna `{ status: "healthy", timestamp }` (usado pelo Docker HEALTHCHECK).

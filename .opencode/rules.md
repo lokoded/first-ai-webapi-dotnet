@@ -92,13 +92,38 @@ tests/
 - Rate limiting deve ser considerado em endpoints de auth
 - Refresh tokens para renovação segura de sessão
 
+## Workflow de Branches
+
+- Branches `feature/*`, `release/*` e `hotfix/*` devem ser deletadas local e remotamente após o merge da PR
+- Nunca manter branches merged localmente — `git branch -d` e `git push origin --delete`
+- Exceção: branches de longo prazo (`develop`, `main`)
+
+## Workflow de Commits
+
+- Ao marcar um todo como `completed`, executar automaticamente:
+  1. `git add -A`
+  2. `git commit -m "<tipo>: <descrição>"` seguindo **Conventional Commits**
+- Tipos derivados do contexto do todo:
+  - `feat` — nova funcionalidade
+  - `fix` — correção de bug
+  - `refactor` — refatoração
+  - `test` — testes
+  - `chore` — manutenção, config, dependências
+  - `docs` — documentação
+  - `perf` — performance
+  - `style` — formatação, linting
+- Exemplo: todo *"Criar endpoint de login"* → commit `feat: criar endpoint de login`
+- Se não houver mudanças a commitar, pular silenciosamente
+- Se o commit falhar, reportar o erro ao usuário e não prosseguir
+- Ao marcar o **último** todo como `completed`, perguntar ao usuário: *"Deseja fazer push?"* — se sim, executar `git push`
+
 ## Armadilhas Conhecidas (LEIA ANTES DE ALTERAR)
 
 1. `SuppressModelStateInvalidFilter = true` — SEMPRE validar com FluentValidation manualmente
-2. `KmsEncryptionService.InitializeKeyAsync().GetAwaiter().GetResult()` — trava se LocalStack estiver offline
-3. Paginação do `ComicService.GetAllAsync` é **em memória** — precisa migrar para OFFSET/FETCH no banco
-4. `Tag` no AES-CBC é sempre vazio (`Array.Empty<byte>()`) — não usar tag em CBC
+2. `KmsEncryptionService` inicialização é lazy (`Lazy<Task>`) — primeira chamada pode ser lenta se LocalStack estiver offline
+3. Paginação do `ComicService.GetAllAsync` usa OFFSET/FETCH no banco — NÃO é mais em memória
+4. `Tag` no AES-GCM tem 16 bytes — diferente do CBC antigo (Array.Empty)
 5. Migration automática só roda em Development/Testing — em produção usar script idempotente
-6. `User.Role` (EUserRole) existe no banco mas autorização usa `ClaimTypes.Role` do Identity — campos semi-duplicados
+6. `User.Role` removido — autorização usa exclusivamente `ClaimTypes.Role` do Identity
 7. Integration tests compartilham banco `FirstWebApiDb_Test` — rodar em sequência (Collection)
-8. `.env` template existe no repositório mas valores reais estão no `.gitignore`
+8. `appsettings.Testing.json` contém credenciais de desenvolvimento (banco local Docker) versionadas — CI sobrescreve com `secrets.*`. Isso é seguro porque as credenciais só funcionam no container Docker local.

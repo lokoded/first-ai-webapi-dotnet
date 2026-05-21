@@ -31,7 +31,8 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-    ?? throw new InvalidOperationException("Connection string not found.");
+    ?? throw new InvalidOperationException(
+        "Connection string not found. Configure via appsettings, user-secrets, or env var ConnectionStrings__DefaultConnection.");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -92,6 +93,8 @@ builder.Services.AddStackExchangeRedisCache(options =>
     options.Configuration = builder.Configuration.GetConnectionString("Redis");
 });
 
+builder.Services.AddMemoryCache();
+
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAddressRepository, AddressRepository>();
 builder.Services.AddScoped<IComicRepository, ComicRepository>();
@@ -114,17 +117,23 @@ builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-    options.AddFixedWindowLimiter("Auth", auth =>
+    options.AddPolicy("Auth", context =>
     {
-        auth.PermitLimit = 10;
-        auth.Window = TimeSpan.FromMinutes(1);
-        auth.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-        auth.QueueLimit = 0;
+        var isTesting = builder.Environment.IsEnvironment("Testing");
+        var permitLimit = isTesting ? 1000 : 10;
+        var ip = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+        return RateLimitPartition.GetFixedWindowLimiter(ip, _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = permitLimit,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0
+        });
     });
 
     options.AddFixedWindowLimiter("Default", config =>
     {
-        config.PermitLimit = 100;
+        var isTesting = builder.Environment.IsEnvironment("Testing");
+        config.PermitLimit = isTesting ? 1000 : 100;
         config.Window = TimeSpan.FromMinutes(1);
         config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         config.QueueLimit = 0;
@@ -134,6 +143,9 @@ builder.Services.AddRateLimiter(options =>
 // CORS — restrito por ambiente (OWASP A05)
 // Em produção: apenas origens conhecidas. Em dev: livre.
 var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>();
+if (allowedOrigins is not { Length: > 0 } && !builder.Environment.IsDevelopment())
+    throw new InvalidOperationException("Cors:AllowedOrigins deve ser configurado em ambientes não-Development.");
+
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("ApiCors", policy =>
@@ -192,6 +204,7 @@ app.Use(async (context, next) =>
     context.Response.Headers["X-Frame-Options"] = "DENY";
     context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
     context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    context.Response.Headers["Content-Security-Policy"] = "default-src 'none'";
     await next();
 });
 

@@ -72,7 +72,10 @@ public class FileLogger : ILogger
         };
 
         if (exception != null)
-            logRecord["Exception"] = exception.ToString();
+        {
+            logRecord["ExceptionType"] = exception.GetType().Name;
+            logRecord["ExceptionMessage"] = exception.Message;
+        }
 
         var traceId = _httpContextAccessor.HttpContext?.TraceIdentifier;
         if (!string.IsNullOrEmpty(traceId))

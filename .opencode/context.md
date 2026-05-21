@@ -5,20 +5,6 @@
 
 ---
 
-## Stack Técnica
-
-| Camada | Tecnologia |
-|--------|-----------|
-| Runtime | .NET 10 (net10.0) |
-| ORM | Entity Framework Core 10 |
-| Banco | SQL Server 2022 (Docker) |
-| Cache | Redis (Docker) |
-| Criptografia | AWS KMS (LocalStack) + AES-256-CBC |
-| Autenticação | JWT (HMAC-SHA256) |
-| Documentação | Swagger + Scalar |
-| Validação | FluentValidation |
-| Testes | xUnit + Moq + FluentAssertions + WebApplicationFactory |
-
 ## Estrutura
 
 ```
@@ -47,11 +33,11 @@ FirstWebApi.slnx
 
 | Item | Status |
 |------|--------|
-| Build | 0 erros, 8 warnings (pré-existentes em AuthServiceTests nullables) |
+| Build | 0 erros, 0 warnings |
 | Testes unitários | 35/35 ✅ |
 | Testes de integração | 21/21 ✅ |
 | Docker Compose | sqlserver + redis + localstack + api rodando |
-| GitHub Actions | ❌ Pendente (Módulo 3) |
+| GitHub Actions | ✅ CI + Security Scan |
 | Cobertura de código | ❌ Não mensurada |
 | OpenCode | v1.15.5 configurado |
 | Migrations | 2 (InitialCreate, AddRefreshTokens) |
@@ -94,7 +80,7 @@ FirstWebApi.slnx
 | 0 | Setup & Diagnóstico | ✅ Concluído |
 | 1 | OpenCode, Agents & CLI | ✅ Concluído |
 | 2 | DevSecOps (OWASP Top 10) | ✅ Concluído |
-| 3 | CI/CD (GitHub Actions) | ⏳ Próximo |
+| 3 | CI/CD (GitHub Actions) | ✅ Concluído |
 | 4 | Performance & Arquitetura | ⬜ |
 | 5 | Features Corporativas | ⬜ |
 | 6 | Testes Avançados | ⬜ |

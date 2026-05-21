@@ -23,7 +23,7 @@ public class ExceptionMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro não tratado: {Message}", ex.Message);
+            _logger.LogError(ex, "Erro não tratado");
             await HandleExceptionAsync(context, ex);
         }
     }
@@ -31,13 +31,14 @@ public class ExceptionMiddleware
     private static async Task HandleExceptionAsync(HttpContext context, Exception exception)
     {
         context.Response.ContentType = "application/problem+json";
+        context.Response.Headers["X-Content-Type-Options"] = "nosniff";
 
         var (statusCode, title, detail) = exception switch
         {
             UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "Não autorizado", exception.Message),
             KeyNotFoundException => (HttpStatusCode.NotFound, "Não encontrado", exception.Message),
             InvalidOperationException => (HttpStatusCode.Conflict, "Conflito", exception.Message),
-            ArgumentException => (HttpStatusCode.BadRequest, "Requisição inválida", exception.Message),
+            ArgumentException => (HttpStatusCode.BadRequest, "Requisição inválida", "A requisição contém dados inválidos."),
             _ => (HttpStatusCode.InternalServerError, "Erro interno", "Ocorreu um erro interno no servidor.")
         };
 

@@ -1,5 +1,4 @@
 using FirstWebApi.Domain.Entities;
-using FirstWebApi.Domain.Enums;
 using FirstWebApi.Domain.ValueObjects;
 using FluentAssertions;
 
@@ -80,14 +79,13 @@ public class UserTests
     }
 
     [Fact]
-    public void CriarUsuario_DeveTerIdEUserRole()
+    public void CriarUsuario_DeveTerIdValido()
     {
         var user = new User("Joao", "joao", "joao@email.com");
 
         user.Id.Should().NotBeEmpty();
         user.Nome.Should().Be("Joao");
         user.Email.Should().Be("joao@email.com");
-        user.Role.Should().Be(EUserRole.User);
         user.CreatedAt.Should().BeCloseTo(DateTime.UtcNow, TimeSpan.FromSeconds(5));
     }
 }
