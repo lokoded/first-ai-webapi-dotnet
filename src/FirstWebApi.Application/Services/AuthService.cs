@@ -13,6 +13,11 @@ namespace FirstWebApi.Application.Services;
 
 public class AuthService : IAuthService
 {
+    private static readonly TimeSpan RefreshTokenExpiry = TimeSpan.FromDays(7);
+    private const string InvalidEmailOrPassword = "Email ou senha inválidos.";
+    private const string InvalidRefreshToken = "Refresh token inválido ou expirado.";
+    private const string UserNotFound = "Usuário não encontrado.";
+
     private readonly UserManager<User> _userManager;
     private readonly IUserRepository _userRepository;
     private readonly ITokenService _tokenService;
@@ -87,7 +92,7 @@ public class AuthService : IAuthService
         }
 
         var (refreshToken, tokenHash) = _tokenService.GenerateRefreshToken();
-        var refreshTokenEntity = new RefreshToken(user.Id, tokenHash, DateTime.UtcNow.AddDays(7));
+        var refreshTokenEntity = new RefreshToken(user.Id, tokenHash, DateTime.UtcNow + RefreshTokenExpiry);
         await _refreshTokenRepository.AddAsync(refreshTokenEntity);
 
         await _unitOfWork.SaveChangesAsync();
@@ -97,15 +102,7 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("Usuário {UserId} registrado com sucesso", user.Id);
 
-        return new AuthResponse
-        {
-            Token = token,
-            RefreshToken = refreshToken,
-            Email = user.Email!,
-            Nome = user.Nome,
-            UserName = user.UserName!,
-            Roles = roles
-        };
+        return BuildAuthResponse(token, refreshToken, user, roles);
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
@@ -113,9 +110,8 @@ public class AuthService : IAuthService
         var user = await _userRepository.GetByEmailAsync(request.Email);
         if (user == null)
         {
-            // Equaliza tempo via hash dummy para evitar timing attack
             await _userManager.CheckPasswordAsync(IdentityUserPlaceholder(), "fake");
-            throw new UnauthorizedAccessException("Email ou senha inválidos.");
+            throw new UnauthorizedAccessException(InvalidEmailOrPassword);
         }
 
         if (await _userManager.IsLockedOutAsync(user))
@@ -126,13 +122,13 @@ public class AuthService : IAuthService
         {
             await _userManager.AccessFailedAsync(user);
             _logger.LogWarning("Tentativa de login inválida para usuário {UserId}", user.Id);
-            throw new UnauthorizedAccessException("Email ou senha inválidos.");
+            throw new UnauthorizedAccessException(InvalidEmailOrPassword);
         }
 
         await _userManager.ResetAccessFailedCountAsync(user);
 
         var (refreshToken, tokenHash) = _tokenService.GenerateRefreshToken();
-        var refreshTokenEntity = new RefreshToken(user.Id, tokenHash, DateTime.UtcNow.AddDays(7));
+        var refreshTokenEntity = new RefreshToken(user.Id, tokenHash, DateTime.UtcNow + RefreshTokenExpiry);
         await _refreshTokenRepository.AddAsync(refreshTokenEntity);
         await _unitOfWork.SaveChangesAsync();
 
@@ -141,15 +137,7 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("Usuário {UserId} fez login", user.Id);
 
-        return new AuthResponse
-        {
-            Token = token,
-            RefreshToken = refreshToken,
-            Email = user.Email!,
-            Nome = user.Nome,
-            UserName = user.UserName!,
-            Roles = roles
-        };
+        return BuildAuthResponse(token, refreshToken, user, roles);
     }
 
     public async Task<AuthResponse> RefreshTokenAsync(string refreshToken)
@@ -158,43 +146,34 @@ public class AuthService : IAuthService
         var storedToken = await _refreshTokenRepository.GetByTokenHashAsync(tokenHash);
 
         if (storedToken is null)
-            throw new UnauthorizedAccessException("Refresh token inválido ou expirado.");
+            throw new UnauthorizedAccessException(InvalidRefreshToken);
 
         if (storedToken.IsRevoked)
         {
-            // Token reuse detected — possível roubo de token
             _logger.LogWarning("Possível roubo de refresh token detectado para usuário {UserId}. Revogando todos os tokens.", storedToken.UserId);
             await RevokeRefreshTokensAsync(storedToken.UserId);
-            throw new UnauthorizedAccessException("Refresh token inválido ou expirado.");
+            throw new UnauthorizedAccessException(InvalidRefreshToken);
         }
 
         if (storedToken.IsExpired)
-            throw new UnauthorizedAccessException("Refresh token inválido ou expirado.");
+            throw new UnauthorizedAccessException(InvalidRefreshToken);
 
         storedToken.Revoke();
         _refreshTokenRepository.Update(storedToken);
 
         var user = await _userRepository.GetByIdAsync(storedToken.UserId);
         if (user is null)
-            throw new UnauthorizedAccessException("Usuário não encontrado.");
+            throw new UnauthorizedAccessException(UserNotFound);
 
         var (newRefreshToken, newTokenHash) = _tokenService.GenerateRefreshToken();
-        var newRefreshTokenEntity = new RefreshToken(user.Id, newTokenHash, DateTime.UtcNow.AddDays(7));
+        var newRefreshTokenEntity = new RefreshToken(user.Id, newTokenHash, DateTime.UtcNow + RefreshTokenExpiry);
         await _refreshTokenRepository.AddAsync(newRefreshTokenEntity);
         await _unitOfWork.SaveChangesAsync();
 
         var roles = (await _userManager.GetRolesAsync(user)).ToList();
         var token = _tokenService.GenerateToken(user.Id, user.Email!, user.Nome, roles);
 
-        return new AuthResponse
-        {
-            Token = token,
-            RefreshToken = newRefreshToken,
-            Email = user.Email!,
-            Nome = user.Nome,
-            UserName = user.UserName!,
-            Roles = roles
-        };
+        return BuildAuthResponse(token, newRefreshToken, user, roles);
     }
 
     public async Task RevokeRefreshTokensAsync(Guid userId)
@@ -212,7 +191,7 @@ public class AuthService : IAuthService
     {
         var user = await _userRepository.GetByIdAsync(userId);
         if (user == null)
-            throw new KeyNotFoundException("Usuário não encontrado.");
+            throw new KeyNotFoundException(UserNotFound);
 
         var roles = await _userManager.GetRolesAsync(user);
         var (cpf, rg, endereco) = await DecryptUserDataAsync(user, userId);
@@ -244,7 +223,7 @@ public class AuthService : IAuthService
     {
         var user = await _userRepository.GetByIdAsync(userId);
         if (user == null)
-            throw new KeyNotFoundException("Usuário não encontrado.");
+            throw new KeyNotFoundException(UserNotFound);
 
         var passwordValid = await _userManager.CheckPasswordAsync(user, senha);
         if (!passwordValid)
@@ -317,6 +296,16 @@ public class AuthService : IAuthService
 
         return (cpf, rg, endereco);
     }
+
+    private static AuthResponse BuildAuthResponse(string token, string refreshToken, User user, IList<string> roles) => new()
+    {
+        Token = token,
+        RefreshToken = refreshToken,
+        Email = user.Email!,
+        Nome = user.Nome,
+        UserName = user.UserName!,
+        Roles = roles
+    };
 
     private static string MaskCpf(string cpf)
     {
