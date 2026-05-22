@@ -34,6 +34,7 @@ public class UsersController(
     }
 
     [HttpPost("me/full")]
+    [EnableRateLimiting("Strict")]
     public async Task<IActionResult> GetFullProfile([FromBody] FullProfileRequest request)
     {
         var validation = await fullProfileValidator.ValidateAsync(request);

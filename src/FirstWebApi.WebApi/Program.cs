@@ -152,6 +152,15 @@ builder.Services.AddRateLimiter(options =>
         config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         config.QueueLimit = 0;
     });
+
+    options.AddFixedWindowLimiter("Strict", config =>
+    {
+        var isTesting = builder.Environment.IsEnvironment("Testing");
+        config.PermitLimit = isTesting ? 1000 : 5;
+        config.Window = TimeSpan.FromMinutes(1);
+        config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        config.QueueLimit = 0;
+    });
 });
 
 // CORS — restrito por ambiente (OWASP A05)
