@@ -204,4 +204,119 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
     }
+
+    [Fact]
+    public async Task GetComics_WithValidToken_ShouldReturn200()
+    {
+        var token = await RegisterAndGetTokenAsync();
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.GetAsync("/api/comics?page=1&pageSize=10");
+
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task GetComicById_WithExistingId_ShouldReturn200()
+    {
+        var token = await RegisterAndGetTokenAsync();
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        var comicTypeId = SeedComicType();
+        var createRequest = new ComicRequest
+        {
+            Titulo = "Get By Id Test",
+            WebUrl = "https://exemplo.com/get-by-id",
+            ComicTypeId = comicTypeId
+        };
+
+        var createContent = new StringContent(
+            JsonSerializer.Serialize(createRequest),
+            Encoding.UTF8, "application/json");
+
+        var createResponse = await _client.PostAsync("/api/comics", createContent);
+        var createBody = await createResponse.Content.ReadAsStringAsync();
+        var created = JsonSerializer.Deserialize<ComicResponse>(createBody,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        var response = await _client.GetAsync($"/api/comics/{created!.Id}");
+
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
+
+        var body = await response.Content.ReadAsStringAsync();
+        var comic = JsonSerializer.Deserialize<ComicResponse>(body,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        comic!.Titulo.Should().Be("Get By Id Test");
+    }
+
+    [Fact]
+    public async Task UpdateComic_WithValidData_ShouldReturn204()
+    {
+        var token = await RegisterAndGetTokenAsync();
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        var comicTypeId = SeedComicType();
+        var createRequest = new ComicRequest
+        {
+            Titulo = "Original Title",
+            WebUrl = "https://exemplo.com/original",
+            ComicTypeId = comicTypeId
+        };
+
+        var createContent = new StringContent(
+            JsonSerializer.Serialize(createRequest),
+            Encoding.UTF8, "application/json");
+
+        var createResponse = await _client.PostAsync("/api/comics", createContent);
+        var createBody = await createResponse.Content.ReadAsStringAsync();
+        var created = JsonSerializer.Deserialize<ComicResponse>(createBody,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        var updateRequest = new ComicRequest
+        {
+            Titulo = "Updated Title",
+            WebUrl = "https://exemplo.com/updated",
+            ComicTypeId = comicTypeId
+        };
+
+        var updateContent = new StringContent(
+            JsonSerializer.Serialize(updateRequest),
+            Encoding.UTF8, "application/json");
+
+        var response = await _client.PutAsync($"/api/comics/{created!.Id}", updateContent);
+
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
+    }
+
+    [Fact]
+    public async Task DeleteComic_WithExistingId_ShouldReturn204()
+    {
+        var token = await RegisterAndGetTokenAsync();
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        var comicTypeId = SeedComicType();
+        var createRequest = new ComicRequest
+        {
+            Titulo = "To Delete",
+            WebUrl = "https://exemplo.com/to-delete",
+            ComicTypeId = comicTypeId
+        };
+
+        var createContent = new StringContent(
+            JsonSerializer.Serialize(createRequest),
+            Encoding.UTF8, "application/json");
+
+        var createResponse = await _client.PostAsync("/api/comics", createContent);
+        var createBody = await createResponse.Content.ReadAsStringAsync();
+        var created = JsonSerializer.Deserialize<ComicResponse>(createBody,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        var response = await _client.DeleteAsync($"/api/comics/{created!.Id}");
+
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
+    }
 }

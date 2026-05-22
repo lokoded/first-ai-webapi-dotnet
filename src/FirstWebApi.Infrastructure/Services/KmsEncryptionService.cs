@@ -9,23 +9,24 @@ using Microsoft.Extensions.Logging;
 
 namespace FirstWebApi.Infrastructure.Services;
 
-public class KmsEncryptionService : IEncryptionService
+public class KmsEncryptionService(
+    IConfiguration configuration,
+    ILogger<KmsEncryptionService> logger,
+    IMemoryCache memoryCache,
+    IAmazonKeyManagementService? kmsClient = null) : IEncryptionService
 {
-    private readonly IAmazonKeyManagementService _kmsClient;
-    private readonly string _keyId;
-    private readonly ILogger<KmsEncryptionService> _logger;
-    private readonly IMemoryCache _cache;
+    private readonly IAmazonKeyManagementService _kmsClient = kmsClient ?? CreateKmsClient(configuration);
+    private readonly string _keyId = configuration.GetSection("Kms")["KeyId"]
+        ?? throw new InvalidOperationException("KMS KeyId não configurado.");
+    private readonly ILogger<KmsEncryptionService> _logger = logger;
+    private readonly IMemoryCache _cache = memoryCache;
     private static readonly TimeSpan CacheSlidingExpiry = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan CacheAbsoluteExpiry = TimeSpan.FromHours(1);
-    private readonly Lazy<Task> _initialization;
+    private Lazy<Task>? _initialization;
 
-    public KmsEncryptionService(IConfiguration configuration, ILogger<KmsEncryptionService> logger, IMemoryCache memoryCache)
+    private static IAmazonKeyManagementService CreateKmsClient(IConfiguration configuration)
     {
-        _logger = logger;
-        _cache = memoryCache;
         var kmsConfig = configuration.GetSection("Kms");
-        _keyId = kmsConfig["KeyId"] ?? throw new InvalidOperationException("KMS KeyId não configurado.");
-
         var endpoint = kmsConfig["Endpoint"];
         var useHttp = kmsConfig.GetValue<bool>("UseHttp");
         var region = kmsConfig["Region"] ?? "us-east-1";
@@ -45,19 +46,14 @@ public class KmsEncryptionService : IEncryptionService
         }
 
         if (!string.IsNullOrEmpty(accessKey) && !string.IsNullOrEmpty(secretKey))
-        {
-            _kmsClient = new AmazonKeyManagementServiceClient(accessKey, secretKey, config);
-        }
-        else
-        {
-            _kmsClient = new AmazonKeyManagementServiceClient(config);
-        }
+            return new AmazonKeyManagementServiceClient(accessKey, secretKey, config);
 
-        _initialization = new Lazy<Task>(InitializeKeyAsync);
+        return new AmazonKeyManagementServiceClient(config);
     }
 
     private async Task EnsureInitializedAsync()
     {
+        _initialization ??= new Lazy<Task>(() => InitializeKeyAsync());
         await _initialization.Value;
     }
 
@@ -119,11 +115,11 @@ public class KmsEncryptionService : IEncryptionService
         });
 
         var plaintextBytes = System.Text.Encoding.UTF8.GetBytes(plaintext);
-        var nonce = new byte[AesGcm.NonceByteSizes.MaxSize]; // 12 bytes
+        var nonce = new byte[AesGcm.NonceByteSizes.MaxSize];
         RandomNumberGenerator.Fill(nonce);
 
         var ciphertextBytes = new byte[plaintextBytes.Length];
-        var tag = new byte[AesGcm.TagByteSizes.MaxSize]; // 16 bytes
+        var tag = new byte[AesGcm.TagByteSizes.MaxSize];
 
         using var aesGcm = new AesGcm(plaintextKeyBytes, AesGcm.TagByteSizes.MaxSize);
         aesGcm.Encrypt(nonce, plaintextBytes, ciphertextBytes, tag);
