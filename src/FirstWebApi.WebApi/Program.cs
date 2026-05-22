@@ -115,8 +115,7 @@ builder.Services.AddScoped<IComicTypeRepository, ComicTypeRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.Decorate<IComicRepository, CachedComicRepository>();
 builder.Services.Decorate<IComicTypeRepository, CachedComicTypeRepository>();
-builder.Services.Decorate<IUserRepository, CachedUserRepository>();
-builder.Services.Decorate<IAddressRepository, CachedAddressRepository>();
+
 builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
