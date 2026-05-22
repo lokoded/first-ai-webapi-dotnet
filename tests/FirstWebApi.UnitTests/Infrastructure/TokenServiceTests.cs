@@ -1,29 +1,24 @@
 using System.Security.Claims;
 using FirstWebApi.Infrastructure.Services;
 using FluentAssertions;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 
 namespace FirstWebApi.UnitTests.Infrastructure;
 
 public class TokenServiceTests
 {
     private readonly TokenService _tokenService;
-    private readonly IConfiguration _configuration;
 
     public TokenServiceTests()
     {
-        var configData = new Dictionary<string, string?>
+        var jwtSettings = new JwtSettings
         {
-            { "Jwt:SecretKey", "X7k9p2m4q8w3e6r1t5y0u2i4o7p9a3s6d8f1g2h5j7k0l2z4x6c8v1b3n5m7" },
-            { "Jwt:Issuer", "FirstWebApi" },
-            { "Jwt:Audience", "FirstWebApiClient" }
+            SecretKey = "X7k9p2m4q8w3e6r1t5y0u2i4o7p9a3s6d8f1g2h5j7k0l2z4x6c8v1b3n5m7",
+            Issuer = "FirstWebApi",
+            Audience = "FirstWebApiClient"
         };
 
-        _configuration = new ConfigurationBuilder()
-            .AddInMemoryCollection(configData)
-            .Build();
-
-        _tokenService = new TokenService(_configuration);
+        _tokenService = new TokenService(Options.Create(jwtSettings));
     }
 
     [Fact]
