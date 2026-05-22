@@ -122,7 +122,15 @@ tests/
 - Se o commit falhar, reportar o erro ao usuário e não prosseguir
 - Ao marcar o **último** todo como `completed`, perguntar ao usuário: *"Deseja fazer push?"* — se sim, executar `git push`
 
-## Armadilhas Conhecidas (LEIA ANTES DE ALTERAR)
+## 🚦 Pré-condições Operacionais
+
+Antes de executar comandos, verificar os pré-requisitos:
+
+- **`dotnet test` em `FirstWebApi.IntegrationTests`**: Docker deve estar rodando com os containers `sqlserver`, `redis` e `localstack` UP. Verificar com `docker compose ps`. Se não estiverem, executar `docker compose up -d` antes dos testes. O erro `SqlException: SQL Server not found` indica Docker ausente/inativo.
+
+---
+
+## ⚠️ Armadilhas Conhecidas (LEIA ANTES DE ALTERAR)
 
 1. `SuppressModelStateInvalidFilter = true` — SEMPRE validar com FluentValidation manualmente
 2. `KmsEncryptionService` inicialização é lazy (`Lazy<Task>`) — primeira chamada pode ser lenta se LocalStack estiver offline
