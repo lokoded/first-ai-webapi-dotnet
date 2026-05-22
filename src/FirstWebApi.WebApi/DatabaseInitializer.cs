@@ -13,7 +13,7 @@ public static class DatabaseInitializer
         var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
 
-        dbContext.Database.Migrate();
+        await dbContext.Database.MigrateAsync();
 
         if (!await roleManager.RoleExistsAsync("User"))
             await roleManager.CreateAsync(new IdentityRole<Guid>("User"));

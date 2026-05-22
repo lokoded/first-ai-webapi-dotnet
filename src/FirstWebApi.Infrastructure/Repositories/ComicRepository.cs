@@ -8,14 +8,6 @@ namespace FirstWebApi.Infrastructure.Repositories;
 public class ComicRepository(AppDbContext context) : IComicRepository
 {
 
-    public async Task<List<Comic>> GetByUserIdAsync(Guid userId)
-    {
-        return await context.Comics
-            .Include(c => c.ComicType)
-            .Where(c => c.UserId == userId)
-            .ToListAsync();
-    }
-
     public async Task<(List<Comic> Items, int TotalCount)> GetPaginatedByUserIdAsync(Guid userId, int page, int pageSize)
     {
         var query = context.Comics

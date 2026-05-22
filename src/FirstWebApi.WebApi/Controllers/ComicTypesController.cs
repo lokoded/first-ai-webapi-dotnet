@@ -10,21 +10,15 @@ namespace FirstWebApi.WebApi.Controllers;
 [Route("api/comic-types")]
 [Authorize]
 [EnableRateLimiting("Default")]
-public class ComicTypesController : ControllerBase
+public class ComicTypesController(IComicTypeService comicTypeService) : ControllerBase
 {
-    private readonly IComicTypeService _comicTypeService;
-
-    public ComicTypesController(IComicTypeService comicTypeService)
-    {
-        _comicTypeService = comicTypeService;
-    }
 
     [HttpGet]
     [ProducesResponseType(typeof(List<ComicTypeResponse>), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAll()
     {
-        var result = await _comicTypeService.GetAllAsync();
+        var result = await comicTypeService.GetAllAsync();
         return Ok(result);
     }
 }

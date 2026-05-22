@@ -22,10 +22,4 @@ public class UserRepository(AppDbContext context) : IUserRepository
     {
         await context.Users.AddAsync(user);
     }
-
-    public Task UpdateAsync(User user)
-    {
-        context.Users.Update(user);
-        return Task.CompletedTask;
-    }
 }

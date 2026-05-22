@@ -20,9 +20,6 @@ public class CachedComicRepository(IComicRepository inner, IDistributedCache cac
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
 
-    public async Task<List<Comic>> GetByUserIdAsync(Guid userId)
-        => await _inner.GetByUserIdAsync(userId);
-
     public async Task<(List<Comic> Items, int TotalCount)> GetPaginatedByUserIdAsync(Guid userId, int page, int pageSize)
     {
         var key = $"comics:user:{userId}:page:{page}:size:{pageSize}";

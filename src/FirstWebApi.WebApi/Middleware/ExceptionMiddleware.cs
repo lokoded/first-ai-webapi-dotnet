@@ -29,7 +29,7 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         {
             UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "Não autorizado", exception.Message),
             KeyNotFoundException => (HttpStatusCode.NotFound, "Não encontrado", exception.Message),
-            InvalidOperationException => (HttpStatusCode.Conflict, "Conflito", exception.Message),
+            InvalidOperationException => (HttpStatusCode.InternalServerError, "Erro interno", exception.Message),
             ArgumentException => (HttpStatusCode.BadRequest, "Requisição inválida", "A requisição contém dados inválidos."),
             _ => (HttpStatusCode.InternalServerError, "Erro interno", "Ocorreu um erro interno no servidor.")
         };

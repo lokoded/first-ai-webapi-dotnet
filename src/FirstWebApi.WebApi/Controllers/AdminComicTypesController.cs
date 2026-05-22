@@ -31,7 +31,7 @@ public class AdminComicTypesController(
             return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
         var result = await comicTypeService.CreateAsync(request.Nome);
-        return CreatedAtAction(nameof(Create), new { nome = result.Nome }, result);
+        return Created($"/api/admin/comic-types/{result.Id}", result);
     }
 
     [HttpDelete("{id:guid}")]
