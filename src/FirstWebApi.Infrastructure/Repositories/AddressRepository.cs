@@ -5,22 +5,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FirstWebApi.Infrastructure.Repositories;
 
-public class AddressRepository : IAddressRepository
+public class AddressRepository(AppDbContext context) : IAddressRepository
 {
-    private readonly AppDbContext _context;
-
-    public AddressRepository(AppDbContext context)
-    {
-        _context = context;
-    }
 
     public async Task<Address?> GetByUserIdAsync(Guid userId)
     {
-        return await _context.Addresses.FirstOrDefaultAsync(a => a.UserId == userId);
+        return await context.Addresses.FirstOrDefaultAsync(a => a.UserId == userId);
     }
 
     public async Task AddAsync(Address address)
     {
-        await _context.Addresses.AddAsync(address);
+        await context.Addresses.AddAsync(address);
     }
 }

@@ -38,24 +38,12 @@ public class FileLoggerProvider : ILoggerProvider
     public void Dispose() => _loggers.Clear();
 }
 
-public class FileLogger : ILogger
+public class FileLogger(string categoryName, string filePath, string format, IHttpContextAccessor httpContextAccessor) : ILogger
 {
     private static readonly HashSet<string> SensitiveKeyTerms =
         ["cpf", "rg", "senha", "password", "token", "secretkey", "accesskey"];
 
-    private readonly string _categoryName;
-    private readonly string _filePath;
-    private readonly string _format;
-    private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly object _lock = new();
-
-    public FileLogger(string categoryName, string filePath, string format, IHttpContextAccessor httpContextAccessor)
-    {
-        _categoryName = categoryName;
-        _filePath = filePath;
-        _format = format;
-        _httpContextAccessor = httpContextAccessor;
-    }
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
@@ -70,7 +58,7 @@ public class FileLogger : ILogger
         {
             ["Timestamp"] = DateTime.UtcNow.ToString("O"),
             ["Level"] = logLevel.ToString(),
-            ["Category"] = _categoryName,
+            ["Category"] = categoryName,
             ["Message"] = formatter(state, exception)
         };
 
@@ -80,7 +68,7 @@ public class FileLogger : ILogger
             logRecord["ExceptionMessage"] = exception.Message;
         }
 
-        var traceId = _httpContextAccessor.HttpContext?.TraceIdentifier;
+        var traceId = httpContextAccessor.HttpContext?.TraceIdentifier;
         if (!string.IsNullOrEmpty(traceId))
             logRecord["TraceId"] = traceId;
 
@@ -109,12 +97,12 @@ public class FileLogger : ILogger
             }
         }
 
-        var fileName = _filePath.Replace(".log", $"-{DateTime.UtcNow:yyyy-MM-dd}.log");
+        var fileName = filePath.Replace(".log", $"-{DateTime.UtcNow:yyyy-MM-dd}.log");
 
         string logLine;
         try
         {
-            logLine = _format == "Json"
+            logLine = format == "Json"
                 ? JsonSerializer.Serialize(logRecord)
                 : $"[{logRecord["Timestamp"]}] {logRecord["Level"]}: {logRecord["Message"]}";
         }

@@ -5,18 +5,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FirstWebApi.Infrastructure.Repositories;
 
-public class ComicRepository : IComicRepository
+public class ComicRepository(AppDbContext context) : IComicRepository
 {
-    private readonly AppDbContext _context;
-
-    public ComicRepository(AppDbContext context)
-    {
-        _context = context;
-    }
 
     public async Task<List<Comic>> GetByUserIdAsync(Guid userId)
     {
-        return await _context.Comics
+        return await context.Comics
             .Include(c => c.ComicType)
             .Where(c => c.UserId == userId)
             .ToListAsync();
@@ -24,7 +18,7 @@ public class ComicRepository : IComicRepository
 
     public async Task<(List<Comic> Items, int TotalCount)> GetPaginatedByUserIdAsync(Guid userId, int page, int pageSize)
     {
-        var query = _context.Comics
+        var query = context.Comics
             .Include(c => c.ComicType)
             .Where(c => c.UserId == userId);
 
@@ -42,25 +36,25 @@ public class ComicRepository : IComicRepository
 
     public async Task<Comic?> GetByIdAsync(Guid id)
     {
-        return await _context.Comics
+        return await context.Comics
             .Include(c => c.ComicType)
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 
     public async Task AddAsync(Comic comic)
     {
-        await _context.Comics.AddAsync(comic);
+        await context.Comics.AddAsync(comic);
     }
 
     public Task UpdateAsync(Comic comic)
     {
-        _context.Comics.Update(comic);
+        context.Comics.Update(comic);
         return Task.CompletedTask;
     }
 
     public Task DeleteAsync(Comic comic)
     {
-        _context.Comics.Remove(comic);
+        context.Comics.Remove(comic);
         return Task.CompletedTask;
     }
 }

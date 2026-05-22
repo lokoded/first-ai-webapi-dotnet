@@ -9,35 +9,21 @@ using Microsoft.Extensions.Logging;
 
 namespace FirstWebApi.Application.Services;
 
-public class ProfileService : IProfileService
+public class ProfileService(
+    IUserRepository userRepository,
+    IAddressRepository addressRepository,
+    IEncryptionService encryptionService,
+    UserManager<User> userManager,
+    ILogger<ProfileService> logger) : IProfileService
 {
-    private readonly IUserRepository _userRepository;
-    private readonly IAddressRepository _addressRepository;
-    private readonly IEncryptionService _encryptionService;
-    private readonly UserManager<User> _userManager;
-    private readonly ILogger<ProfileService> _logger;
-
-    public ProfileService(
-        IUserRepository userRepository,
-        IAddressRepository addressRepository,
-        IEncryptionService encryptionService,
-        UserManager<User> userManager,
-        ILogger<ProfileService> logger)
-    {
-        _userRepository = userRepository;
-        _addressRepository = addressRepository;
-        _encryptionService = encryptionService;
-        _userManager = userManager;
-        _logger = logger;
-    }
 
     public async Task<UserResponse> GetProfileAsync(Guid userId)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
+        var user = await userRepository.GetByIdAsync(userId);
         if (user == null)
             throw new KeyNotFoundException("Usuário não encontrado.");
 
-        var roles = await _userManager.GetRolesAsync(user);
+        var roles = await userManager.GetRolesAsync(user);
         var (cpf, rg, endereco) = await DecryptUserDataAsync(user, userId);
 
         var response = new UserResponse
@@ -65,15 +51,15 @@ public class ProfileService : IProfileService
 
     public async Task<UserResponse> GetFullProfileAsync(Guid userId, string senha)
     {
-        var user = await _userRepository.GetByIdAsync(userId);
+        var user = await userRepository.GetByIdAsync(userId);
         if (user == null)
             throw new KeyNotFoundException("Usuário não encontrado.");
 
-        var passwordValid = await _userManager.CheckPasswordAsync(user, senha);
+        var passwordValid = await userManager.CheckPasswordAsync(user, senha);
         if (!passwordValid)
             throw new UnauthorizedAccessException("Senha inválida. Reautenticação necessária.");
 
-        var roles = await _userManager.GetRolesAsync(user);
+        var roles = await userManager.GetRolesAsync(user);
         var (cpf, rg, endereco) = await DecryptUserDataAsync(user, userId);
 
         return new UserResponse
@@ -101,7 +87,7 @@ public class ProfileService : IProfileService
             user.RgCiphertext, user.RgIv, user.RgTag, user.RgEncryptedDataKey,
             "RG", userId);
 
-        var address = await _addressRepository.GetByUserIdAsync(userId);
+        var address = await addressRepository.GetByUserIdAsync(userId);
         var enderecoJson = await DecryptFieldAsync(
             address?.Ciphertext, address?.Iv, address?.Tag, address?.EncryptedDataKey,
             "endereço", userId);
@@ -122,11 +108,11 @@ public class ProfileService : IProfileService
 
         try
         {
-            return await _encryptionService.DecryptAsync(ciphertext, iv, tag, encryptedDataKey);
+            return await encryptionService.DecryptAsync(ciphertext, iv, tag, encryptedDataKey);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Erro ao descriptografar {FieldName} do usuário {UserId}", fieldName, userId);
+            logger.LogError(ex, "Erro ao descriptografar {FieldName} do usuário {UserId}", fieldName, userId);
             return null;
         }
     }

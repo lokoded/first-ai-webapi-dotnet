@@ -69,10 +69,12 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
-var jwtSettings = builder.Configuration.GetSection("Jwt");
-var secretKey = jwtSettings["SecretKey"]
+var jwtSettingsSection = builder.Configuration.GetSection("Jwt");
+var secretKey = jwtSettingsSection["SecretKey"]
     ?? throw new InvalidOperationException(
         "JWT SecretKey nao configurado. Use env var Jwt__SecretKey ou dotnet user-secrets set \"Jwt:SecretKey\" \"<chave>\".");
+
+builder.Services.Configure<JwtSettings>(jwtSettingsSection);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -86,9 +88,9 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
         ValidateIssuer = true,
-        ValidIssuer = jwtSettings["Issuer"],
+        ValidIssuer = jwtSettingsSection["Issuer"],
         ValidateAudience = true,
-        ValidAudience = jwtSettings["Audience"],
+        ValidAudience = jwtSettingsSection["Audience"],
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
