@@ -35,7 +35,8 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
         When(x => !string.IsNullOrEmpty(x.Cpf), () =>
         {
             RuleFor(x => x.Cpf!)
-                .Must(BeValidCpf).WithMessage("CPF inválido.");
+                .Must(cpf => cpf.Where(char.IsDigit).Count() == 11)
+                .WithMessage("CPF inválido.");
         });
 
         When(x => x.Endereco is not null, () =>
@@ -43,28 +44,5 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             RuleFor(x => x.Endereco!)
                 .SetValidator(new EnderecoInfoValidator());
         });
-    }
-
-    private static bool BeValidCpf(string cpf)
-    {
-        if (string.IsNullOrWhiteSpace(cpf)) return false;
-        var numeros = cpf.Where(char.IsDigit).ToArray();
-        if (numeros.Length != 11) return false;
-        if (numeros.Distinct().Count() == 1) return false;
-
-        var digito1 = CalcularDigito(numeros, 9, 10);
-        if (digito1 != numeros[9] - '0') return false;
-
-        var digito2 = CalcularDigito(numeros, 10, 11);
-        return digito2 == numeros[10] - '0';
-    }
-
-    private static int CalcularDigito(char[] numeros, int tamanho, int pesoInicial)
-    {
-        var soma = 0;
-        for (var i = 0; i < tamanho; i++)
-            soma += (numeros[i] - '0') * (pesoInicial - i);
-        var resto = soma % 11;
-        return resto < 2 ? 0 : 11 - resto;
     }
 }

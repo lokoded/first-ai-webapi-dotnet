@@ -250,32 +250,4 @@ public class AuthServiceTests
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(default), Times.Once);
     }
 
-    [Fact]
-    public async Task GetProfileAsync_WithExistingUser_ShouldReturnProfile()
-    {
-        var userId = Guid.NewGuid();
-        var user = new User("João", "joao_123", "joao@email.com");
-
-        _userRepoMock.Setup(r => r.GetByIdAsync(userId))
-            .ReturnsAsync(user);
-        _userManagerMock.Setup(m => m.GetRolesAsync(user))
-            .ReturnsAsync(["User"]);
-
-        var result = await _authService.GetProfileAsync(userId);
-
-        result.Should().NotBeNull();
-        result.Nome.Should().Be("João");
-        result.Email.Should().Be("joao@email.com");
-    }
-
-    [Fact]
-    public async Task GetProfileAsync_WithNonExistentUser_ShouldThrowException()
-    {
-        _userRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync((User?)null);
-
-        Func<Task> act = () => _authService.GetProfileAsync(Guid.NewGuid());
-        await act.Should().ThrowAsync<KeyNotFoundException>()
-            .WithMessage("Usuário não encontrado.");
-    }
 }

@@ -122,6 +122,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEncryptionService, KmsEncryptionService>();
 builder.Services.AddScoped<IComicService, ComicService>();
 builder.Services.AddScoped<IComicTypeService, ComicTypeService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
 // Rate Limiting — proteção contra abuso (OWASP A04, A07)

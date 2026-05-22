@@ -1,5 +1,4 @@
 using System.Text.Json;
-using FirstWebApi.Application.DTOs;
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
 using FirstWebApi.Application.Interfaces;
@@ -13,6 +12,11 @@ namespace FirstWebApi.Application.Services;
 
 public class AuthService : IAuthService
 {
+    private static readonly TimeSpan RefreshTokenExpiry = TimeSpan.FromDays(7);
+    private const string InvalidEmailOrPassword = "Email ou senha inválidos.";
+    private const string InvalidRefreshToken = "Refresh token inválido ou expirado.";
+    private const string UserNotFound = "Usuário não encontrado.";
+
     private readonly UserManager<User> _userManager;
     private readonly IUserRepository _userRepository;
     private readonly ITokenService _tokenService;
@@ -87,7 +91,7 @@ public class AuthService : IAuthService
         }
 
         var (refreshToken, tokenHash) = _tokenService.GenerateRefreshToken();
-        var refreshTokenEntity = new RefreshToken(user.Id, tokenHash, DateTime.UtcNow.AddDays(7));
+        var refreshTokenEntity = new RefreshToken(user.Id, tokenHash, DateTime.UtcNow + RefreshTokenExpiry);
         await _refreshTokenRepository.AddAsync(refreshTokenEntity);
 
         await _unitOfWork.SaveChangesAsync();
@@ -97,15 +101,7 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("Usuário {UserId} registrado com sucesso", user.Id);
 
-        return new AuthResponse
-        {
-            Token = token,
-            RefreshToken = refreshToken,
-            Email = user.Email!,
-            Nome = user.Nome,
-            UserName = user.UserName!,
-            Roles = roles
-        };
+        return BuildAuthResponse(token, refreshToken, user, roles);
     }
 
     public async Task<AuthResponse> LoginAsync(LoginRequest request)
@@ -113,9 +109,8 @@ public class AuthService : IAuthService
         var user = await _userRepository.GetByEmailAsync(request.Email);
         if (user == null)
         {
-            // Equaliza tempo via hash dummy para evitar timing attack
             await _userManager.CheckPasswordAsync(IdentityUserPlaceholder(), "fake");
-            throw new UnauthorizedAccessException("Email ou senha inválidos.");
+            throw new UnauthorizedAccessException(InvalidEmailOrPassword);
         }
 
         if (await _userManager.IsLockedOutAsync(user))
@@ -126,13 +121,13 @@ public class AuthService : IAuthService
         {
             await _userManager.AccessFailedAsync(user);
             _logger.LogWarning("Tentativa de login inválida para usuário {UserId}", user.Id);
-            throw new UnauthorizedAccessException("Email ou senha inválidos.");
+            throw new UnauthorizedAccessException(InvalidEmailOrPassword);
         }
 
         await _userManager.ResetAccessFailedCountAsync(user);
 
         var (refreshToken, tokenHash) = _tokenService.GenerateRefreshToken();
-        var refreshTokenEntity = new RefreshToken(user.Id, tokenHash, DateTime.UtcNow.AddDays(7));
+        var refreshTokenEntity = new RefreshToken(user.Id, tokenHash, DateTime.UtcNow + RefreshTokenExpiry);
         await _refreshTokenRepository.AddAsync(refreshTokenEntity);
         await _unitOfWork.SaveChangesAsync();
 
@@ -141,15 +136,7 @@ public class AuthService : IAuthService
 
         _logger.LogInformation("Usuário {UserId} fez login", user.Id);
 
-        return new AuthResponse
-        {
-            Token = token,
-            RefreshToken = refreshToken,
-            Email = user.Email!,
-            Nome = user.Nome,
-            UserName = user.UserName!,
-            Roles = roles
-        };
+        return BuildAuthResponse(token, refreshToken, user, roles);
     }
 
     public async Task<AuthResponse> RefreshTokenAsync(string refreshToken)
@@ -158,43 +145,34 @@ public class AuthService : IAuthService
         var storedToken = await _refreshTokenRepository.GetByTokenHashAsync(tokenHash);
 
         if (storedToken is null)
-            throw new UnauthorizedAccessException("Refresh token inválido ou expirado.");
+            throw new UnauthorizedAccessException(InvalidRefreshToken);
 
         if (storedToken.IsRevoked)
         {
-            // Token reuse detected — possível roubo de token
             _logger.LogWarning("Possível roubo de refresh token detectado para usuário {UserId}. Revogando todos os tokens.", storedToken.UserId);
             await RevokeRefreshTokensAsync(storedToken.UserId);
-            throw new UnauthorizedAccessException("Refresh token inválido ou expirado.");
+            throw new UnauthorizedAccessException(InvalidRefreshToken);
         }
 
         if (storedToken.IsExpired)
-            throw new UnauthorizedAccessException("Refresh token inválido ou expirado.");
+            throw new UnauthorizedAccessException(InvalidRefreshToken);
 
         storedToken.Revoke();
         _refreshTokenRepository.Update(storedToken);
 
         var user = await _userRepository.GetByIdAsync(storedToken.UserId);
         if (user is null)
-            throw new UnauthorizedAccessException("Usuário não encontrado.");
+            throw new UnauthorizedAccessException(UserNotFound);
 
         var (newRefreshToken, newTokenHash) = _tokenService.GenerateRefreshToken();
-        var newRefreshTokenEntity = new RefreshToken(user.Id, newTokenHash, DateTime.UtcNow.AddDays(7));
+        var newRefreshTokenEntity = new RefreshToken(user.Id, newTokenHash, DateTime.UtcNow + RefreshTokenExpiry);
         await _refreshTokenRepository.AddAsync(newRefreshTokenEntity);
         await _unitOfWork.SaveChangesAsync();
 
         var roles = (await _userManager.GetRolesAsync(user)).ToList();
         var token = _tokenService.GenerateToken(user.Id, user.Email!, user.Nome, roles);
 
-        return new AuthResponse
-        {
-            Token = token,
-            RefreshToken = newRefreshToken,
-            Email = user.Email!,
-            Nome = user.Nome,
-            UserName = user.UserName!,
-            Roles = roles
-        };
+        return BuildAuthResponse(token, newRefreshToken, user, roles);
     }
 
     public async Task RevokeRefreshTokensAsync(Guid userId)
@@ -208,136 +186,14 @@ public class AuthService : IAuthService
         await _unitOfWork.SaveChangesAsync();
     }
 
-    public async Task<UserResponse> GetProfileAsync(Guid userId)
+    private static AuthResponse BuildAuthResponse(string token, string refreshToken, User user, IList<string> roles) => new()
     {
-        var user = await _userRepository.GetByIdAsync(userId);
-        if (user == null)
-            throw new KeyNotFoundException("Usuário não encontrado.");
-
-        var roles = await _userManager.GetRolesAsync(user);
-        var (cpf, rg, endereco) = await DecryptUserDataAsync(user, userId);
-
-        var response = new UserResponse
-        {
-            Id = user.Id,
-            Nome = user.Nome,
-            UserName = user.UserName!,
-            Email = user.Email!,
-            Role = roles.FirstOrDefault() ?? "User",
-            CreatedAt = user.CreatedAt,
-            HasFullData = false
-        };
-
-        if (cpf != null)
-            response.Cpf = MaskCpf(cpf);
-
-        if (rg != null)
-            response.Rg = MaskRg(rg);
-
-        if (endereco != null)
-            response.Endereco = MaskEndereco(endereco);
-
-        return response;
-    }
-
-    public async Task<UserResponse> GetFullProfileAsync(Guid userId, string senha)
-    {
-        var user = await _userRepository.GetByIdAsync(userId);
-        if (user == null)
-            throw new KeyNotFoundException("Usuário não encontrado.");
-
-        var passwordValid = await _userManager.CheckPasswordAsync(user, senha);
-        if (!passwordValid)
-            throw new UnauthorizedAccessException("Senha inválida. Reautenticação necessária.");
-
-        var roles = await _userManager.GetRolesAsync(user);
-        var (cpf, rg, endereco) = await DecryptUserDataAsync(user, userId);
-
-        return new UserResponse
-        {
-            Id = user.Id,
-            Nome = user.Nome,
-            UserName = user.UserName!,
-            Email = user.Email!,
-            Cpf = cpf,
-            Rg = rg,
-            Endereco = endereco,
-            Role = roles.FirstOrDefault() ?? "User",
-            CreatedAt = user.CreatedAt,
-            HasFullData = true
-        };
-    }
-
-    private async Task<(string? cpf, string? rg, EnderecoInfo? endereco)> DecryptUserDataAsync(User user, Guid userId)
-    {
-        string? cpf = null;
-        string? rg = null;
-        EnderecoInfo? endereco = null;
-
-        if (user.CpfCiphertext != null && user.CpfIv != null && user.CpfTag != null && user.CpfEncryptedDataKey != null)
-        {
-            try
-            {
-                cpf = await _encryptionService.DecryptAsync(
-                    user.CpfCiphertext, user.CpfIv, user.CpfTag, user.CpfEncryptedDataKey);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao descriptografar CPF do usuário {UserId}", userId);
-            }
-        }
-
-        if (user.RgCiphertext != null && user.RgIv != null && user.RgTag != null && user.RgEncryptedDataKey != null)
-        {
-            try
-            {
-                rg = await _encryptionService.DecryptAsync(
-                    user.RgCiphertext, user.RgIv, user.RgTag, user.RgEncryptedDataKey);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao descriptografar RG do usuário {UserId}", userId);
-            }
-        }
-
-        var address = await _addressRepository.GetByUserIdAsync(userId);
-        if (address?.Ciphertext != null && address?.Iv != null && address?.Tag != null && address?.EncryptedDataKey != null)
-        {
-            try
-            {
-                var enderecoJson = await _encryptionService.DecryptAsync(
-                    address.Ciphertext, address.Iv, address.Tag, address.EncryptedDataKey);
-                endereco = JsonSerializer.Deserialize<EnderecoInfo>(enderecoJson);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao descriptografar endereço do usuário {UserId}", userId);
-            }
-        }
-
-        return (cpf, rg, endereco);
-    }
-
-    private static string MaskCpf(string cpf)
-    {
-        if (string.IsNullOrEmpty(cpf) || cpf.Length < 11)
-            return cpf;
-
-        return $"***.{cpf[3..6]}.{cpf[6..9]}-**";
-    }
-
-    private static string MaskRg(string rg)
-    {
-        if (string.IsNullOrEmpty(rg) || rg.Length < 4)
-            return rg;
-
-        return $"*****-{rg[^4..]}";
-    }
-
-    private static EnderecoInfo MaskEndereco(EnderecoInfo endereco) => new()
-    {
-        Cidade = endereco.Cidade,
-        Estado = endereco.Estado
+        Token = token,
+        RefreshToken = refreshToken,
+        Email = user.Email!,
+        Nome = user.Nome,
+        UserName = user.UserName!,
+        Roles = roles
     };
 
     private static User IdentityUserPlaceholder() => new("", "", "");

@@ -13,7 +13,7 @@ namespace FirstWebApi.WebApi.Controllers;
 [Authorize]
 [EnableRateLimiting("Default")]
 public class UsersController(
-    IAuthService authService,
+    IProfileService profileService,
     IValidator<FullProfileRequest> fullProfileValidator) : ControllerBase
 {
 
@@ -29,7 +29,7 @@ public class UsersController(
                 statusCode: StatusCodes.Status401Unauthorized,
                 title: "Não autorizado");
 
-        var profile = await authService.GetProfileAsync(userId);
+        var profile = await profileService.GetProfileAsync(userId);
         return Ok(profile);
     }
 
@@ -52,7 +52,7 @@ public class UsersController(
 
         try
         {
-            var profile = await authService.GetFullProfileAsync(userId, request.Senha);
+            var profile = await profileService.GetFullProfileAsync(userId, request.Senha);
             return Ok(profile);
         }
         catch (UnauthorizedAccessException ex)
