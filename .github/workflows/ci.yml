@@ -30,7 +30,7 @@ jobs:
           - 6379:6379
 
       localstack:
-        image: localstack/localstack:3.8
+        image: localstack/localstack:4.0
         env:
           SERVICES: kms
           AWS_DEFAULT_REGION: us-east-1
