@@ -28,7 +28,7 @@ services:
       - SA_PASSWORD=${SA_PASSWORD} # Senha do usuário sa (vem do .env)
       - MSSQL_PID=Developer       # Edição gratuita para desenvolvimento
     ports:
-      - "1433:1433"               # Mapeia porta do host para o container
+      - "1433:1433"               # Porta padrão SQL Server
     volumes:
       - sqlserver_data:/var/opt/mssql  # Volume named: persiste dados do banco
     restart: unless-stopped       # Reinicia automaticamente se parar
@@ -41,7 +41,7 @@ services:
     image: redis:alpine
     container_name: firstwebapi-redis
     ports:
-      - "6379:6379"               # Porta padrão do Redis
+      - "6379:6379"               # Porta padrão Redis
     volumes:
       - redis_data:/data          # Volume named: persiste snapshots do cache
     restart: unless-stopped
@@ -58,8 +58,7 @@ services:
     image: localstack/localstack-pro
     container_name: firstwebapi-localstack
     ports:
-      - "4566:4566"               # Gateway único para todos os serviços AWS
-      - "4510-4559:4510-4559"     # Port range para serviços externos (ex: Lambda)
+      - "14566:4566"              # Gateway único LocalStack (porta alternativa)
     environment:
       - SERVICES=kms,lambda       # Habilita apenas KMS e Lambda (economiza RAM)
       - AWS_DEFAULT_REGION=us-east-1

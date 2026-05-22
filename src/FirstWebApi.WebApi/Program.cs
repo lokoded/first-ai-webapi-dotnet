@@ -9,6 +9,7 @@ using FirstWebApi.Infrastructure.Repositories;
 using FirstWebApi.Infrastructure.Repositories.Decorators;
 using FirstWebApi.Infrastructure.Services;
 using FirstWebApi.WebApi.Logging;
+using FirstWebApi.WebApi;
 using FirstWebApi.WebApi.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -101,8 +102,7 @@ builder.Services.AddMemoryCache();
 
 builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
 {
-    var config = builder.Configuration.GetConnectionString("Redis");
-    return ConnectionMultiplexer.Connect(config ?? "localhost:6379");
+    return ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!);
 });
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -191,33 +191,10 @@ builder.Logging.Services.AddSingleton<ILoggerProvider>(sp =>
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
-{
-    using (var scope = app.Services.CreateScope())
-    {
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
-
-        dbContext.Database.Migrate();
-
-        if (!await roleManager.RoleExistsAsync("User"))
-            await roleManager.CreateAsync(new IdentityRole<Guid>("User"));
-        if (!await roleManager.RoleExistsAsync("Admin"))
-            await roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
-    }
-}
+    await app.MigrateAndSeedAsync();
 
 app.UseMiddleware<ExceptionMiddleware>();
-
-// Security Headers (OWASP A05)
-app.Use(async (context, next) =>
-{
-    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-    context.Response.Headers["X-Frame-Options"] = "DENY";
-    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-    context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
-    context.Response.Headers["Content-Security-Policy"] = "default-src 'none'";
-    await next();
-});
+app.UseMiddleware<SecurityHeadersMiddleware>();
 
 // HTTPS redirection em produção (OWASP A05)
 if (!app.Environment.IsDevelopment())
