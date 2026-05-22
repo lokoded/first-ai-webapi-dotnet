@@ -78,9 +78,43 @@ Retorne: caminhos dos arquivos e resumo da lógica.
 
 ## 6. Fluxo de Trabalho Recomendado
 
-1. **Planeje** (Plan agent / Tab)
-2. **Pesquise** (@explore) — entenda o código existente
-3. **Implemente** (@dev-agent + skill) — código seguindo convenções
-4. **Teste** (@tester) — unit + integration
-5. **Revise** (@security-reviewer ou skill code-review)
-6. **Compile e teste** — `dotnet build && dotnet test`
+1. **Planeje** — entenda o código existente (@explore)
+2. **Implemente** (@dev-agent + skill) — código seguindo convenções
+3. **Teste** (@tester) — unit + integration
+4. **Revise** (@security-reviewer ou skill code-review)
+5. **Compile e teste** — `dotnet build && dotnet test`
+
+## 7. Git Flow — Ciclo de Vida de uma Issue
+
+### Feature / Fix (padrão)
+```
+develop
+  └─► feature|x/fix/issue-desc  ──PR──►  develop  ──PR──►  main
+```
+
+1. `git checkout develop && git pull`
+2. `git checkout -b fix/<issue>-<descricao>`
+3. Implementar, commit, push
+4. `gh pr create --base develop --head fix/<branch>`
+5. Aguardar CI (`gh pr view <num> --json statusCheckRollup`)
+6. `gh pr merge <num> --squash`
+7. Deletar branch: `git branch -d fix/<branch>` && `git push origin --delete fix/<branch>`
+8. `git checkout develop && git pull`
+
+### Hotfix (urgente, bypassa develop)
+```
+main
+  └─► hotfix/issue-desc  ──PR──►  main  ──merge-back──►  develop
+```
+
+1. `git checkout main && git pull`
+2. `git checkout -b hotfix/<issue>-<descricao>`
+3. Implementar, commit, push
+4. `gh pr create --base main --head hotfix/<branch>`
+5. Aguardar CI, merge, deletar branch
+6. `git checkout develop && git rebase main && git push origin develop`
+
+### Regras de Ouro
+- **NUNCA** criar PR de `feature/*` ou `fix/*` direto para `main`
+- `main` só recebe merge de `develop` (via PR) ou `hotfix/*`
+- Sempre manter `develop` sincronizada com `main`
