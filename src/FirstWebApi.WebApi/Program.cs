@@ -1,4 +1,5 @@
 using System.Text;
+using DotNetEnv;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Application.Services;
 using FirstWebApi.Application.Validators;
@@ -20,6 +21,8 @@ using Scalar.AspNetCore;
 using FluentValidation;
 using StackExchange.Redis;
 using System.Threading.RateLimiting;
+
+DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -112,8 +115,7 @@ builder.Services.AddScoped<IComicTypeRepository, ComicTypeRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.Decorate<IComicRepository, CachedComicRepository>();
 builder.Services.Decorate<IComicTypeRepository, CachedComicTypeRepository>();
-builder.Services.Decorate<IUserRepository, CachedUserRepository>();
-builder.Services.Decorate<IAddressRepository, CachedAddressRepository>();
+
 builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
@@ -145,6 +147,15 @@ builder.Services.AddRateLimiter(options =>
     {
         var isTesting = builder.Environment.IsEnvironment("Testing");
         config.PermitLimit = isTesting ? 1000 : 100;
+        config.Window = TimeSpan.FromMinutes(1);
+        config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        config.QueueLimit = 0;
+    });
+
+    options.AddFixedWindowLimiter("Strict", config =>
+    {
+        var isTesting = builder.Environment.IsEnvironment("Testing");
+        config.PermitLimit = isTesting ? 1000 : 5;
         config.Window = TimeSpan.FromMinutes(1);
         config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         config.QueueLimit = 0;
