@@ -26,7 +26,7 @@ public class AuthServiceTests
     public AuthServiceTests()
     {
         _userManagerMock = new Mock<UserManager<User>>(
-            Mock.Of<IUserStore<User>>(), null, null, null, null, null, null, null, null);
+            Mock.Of<IUserStore<User>>(), null!, null!, null!, null!, null!, null!, null!, null!);
         _userRepoMock = new Mock<IUserRepository>();
         _tokenServiceMock = new Mock<ITokenService>();
         _tokenServiceMock.Setup(t => t.GenerateRefreshToken())
