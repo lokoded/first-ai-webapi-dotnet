@@ -28,6 +28,7 @@ jobs:
         image: redis:alpine
         ports:
           - 6379:6379
+        options: --requirepass "RedisP@ss123"
 
       localstack:
         image: localstack/localstack:4.0
@@ -58,7 +59,7 @@ jobs:
         run: dotnet test tests/FirstWebApi.IntegrationTests --no-restore --configuration Release --settings coverlet.runsettings --verbosity normal
         env:
           ConnectionStrings__DefaultConnection: ${{ secrets.CONNECTION_STRING_TEST }}
-          ConnectionStrings__Redis: ${{ secrets.REDIS_CONNECTION }}
+          ConnectionStrings__Redis: localhost:6379,password=RedisP@ss123
           Kms__Endpoint: ${{ secrets.KMS_ENDPOINT }}
           Kms__UseHttp: true
           Kms__KeyId: ${{ secrets.KMS_KEY_ID }}
