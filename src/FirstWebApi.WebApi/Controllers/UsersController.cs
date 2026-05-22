@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.Interfaces;
-using FirstWebApi.Application.Validators;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -12,14 +12,10 @@ namespace FirstWebApi.WebApi.Controllers;
 [Route("api/users")]
 [Authorize]
 [EnableRateLimiting("Default")]
-public class UsersController : ControllerBase
+public class UsersController(
+    IAuthService authService,
+    IValidator<FullProfileRequest> fullProfileValidator) : ControllerBase
 {
-    private readonly IAuthService _authService;
-
-    public UsersController(IAuthService authService)
-    {
-        _authService = authService;
-    }
 
     [HttpGet("me")]
     public async Task<IActionResult> GetProfile()
@@ -33,15 +29,14 @@ public class UsersController : ControllerBase
                 statusCode: StatusCodes.Status401Unauthorized,
                 title: "Não autorizado");
 
-        var profile = await _authService.GetProfileAsync(userId);
+        var profile = await authService.GetProfileAsync(userId);
         return Ok(profile);
     }
 
     [HttpPost("me/full")]
     public async Task<IActionResult> GetFullProfile([FromBody] FullProfileRequest request)
     {
-        var validator = new FullProfileRequestValidator();
-        var validation = await validator.ValidateAsync(request);
+        var validation = await fullProfileValidator.ValidateAsync(request);
         if (!validation.IsValid)
             return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
@@ -56,7 +51,7 @@ public class UsersController : ControllerBase
 
         try
         {
-            var profile = await _authService.GetFullProfileAsync(userId, request.Senha);
+            var profile = await authService.GetFullProfileAsync(userId, request.Senha);
             return Ok(profile);
         }
         catch (UnauthorizedAccessException ex)

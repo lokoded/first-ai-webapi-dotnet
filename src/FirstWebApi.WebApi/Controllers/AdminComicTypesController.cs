@@ -1,7 +1,7 @@
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
 using FirstWebApi.Application.Interfaces;
-using FirstWebApi.Application.Validators;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -13,14 +13,10 @@ namespace FirstWebApi.WebApi.Controllers;
 [Route("api/admin/comic-types")]
 [Authorize(Roles = "Admin")]
 [EnableRateLimiting("Default")]
-public class AdminComicTypesController : ControllerBase
+public class AdminComicTypesController(
+    IComicTypeService comicTypeService,
+    IValidator<ComicTypeRequest> validator) : ControllerBase
 {
-    private readonly IComicTypeService _comicTypeService;
-
-    public AdminComicTypesController(IComicTypeService comicTypeService)
-    {
-        _comicTypeService = comicTypeService;
-    }
 
     [HttpPost]
     [ProducesResponseType(typeof(ComicTypeResponse), StatusCodes.Status201Created)]
@@ -30,12 +26,11 @@ public class AdminComicTypesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Create([FromBody] ComicTypeRequest request)
     {
-        var validator = new ComicTypeRequestValidator();
         var validation = await validator.ValidateAsync(request);
         if (!validation.IsValid)
             return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
-        var result = await _comicTypeService.CreateAsync(request.Nome);
+        var result = await comicTypeService.CreateAsync(request.Nome);
         return CreatedAtAction(nameof(Create), new { nome = result.Nome }, result);
     }
 
@@ -47,7 +42,7 @@ public class AdminComicTypesController : ControllerBase
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var success = await _comicTypeService.DeleteAsync(id);
+        var success = await comicTypeService.DeleteAsync(id);
         if (!success)
             return Problem(detail: "Tipo de comic não encontrado.", statusCode: 404, title: "Não encontrado");
 

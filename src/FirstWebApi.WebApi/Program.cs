@@ -1,6 +1,7 @@
 using System.Text;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Application.Services;
+using FirstWebApi.Application.Validators;
 using FirstWebApi.Domain.Entities;
 using FirstWebApi.Domain.Interfaces;
 using FirstWebApi.Infrastructure.Data;
@@ -15,6 +16,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using FluentValidation;
 using StackExchange.Redis;
 using System.Threading.RateLimiting;
 
@@ -26,6 +28,7 @@ builder.Services.AddControllers()
         options.SuppressModelStateInvalidFilter = true;
     });
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 builder.Services.AddProblemDetails();
 
 builder.Services.AddEndpointsApiExplorer();
