@@ -1,4 +1,5 @@
 using System.Text;
+using DotNetEnv;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Application.Services;
 using FirstWebApi.Application.Validators;
@@ -20,6 +21,8 @@ using Scalar.AspNetCore;
 using FluentValidation;
 using StackExchange.Redis;
 using System.Threading.RateLimiting;
+
+DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
