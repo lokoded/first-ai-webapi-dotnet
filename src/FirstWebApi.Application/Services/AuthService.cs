@@ -249,52 +249,42 @@ public class AuthService : IAuthService
 
     private async Task<(string? cpf, string? rg, EnderecoInfo? endereco)> DecryptUserDataAsync(User user, Guid userId)
     {
-        string? cpf = null;
-        string? rg = null;
-        EnderecoInfo? endereco = null;
+        var cpf = await DecryptFieldAsync(
+            user.CpfCiphertext, user.CpfIv, user.CpfTag, user.CpfEncryptedDataKey,
+            "CPF", userId);
 
-        if (user.CpfCiphertext != null && user.CpfIv != null && user.CpfTag != null && user.CpfEncryptedDataKey != null)
-        {
-            try
-            {
-                cpf = await _encryptionService.DecryptAsync(
-                    user.CpfCiphertext, user.CpfIv, user.CpfTag, user.CpfEncryptedDataKey);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao descriptografar CPF do usuário {UserId}", userId);
-            }
-        }
-
-        if (user.RgCiphertext != null && user.RgIv != null && user.RgTag != null && user.RgEncryptedDataKey != null)
-        {
-            try
-            {
-                rg = await _encryptionService.DecryptAsync(
-                    user.RgCiphertext, user.RgIv, user.RgTag, user.RgEncryptedDataKey);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao descriptografar RG do usuário {UserId}", userId);
-            }
-        }
+        var rg = await DecryptFieldAsync(
+            user.RgCiphertext, user.RgIv, user.RgTag, user.RgEncryptedDataKey,
+            "RG", userId);
 
         var address = await _addressRepository.GetByUserIdAsync(userId);
-        if (address?.Ciphertext != null && address?.Iv != null && address?.Tag != null && address?.EncryptedDataKey != null)
-        {
-            try
-            {
-                var enderecoJson = await _encryptionService.DecryptAsync(
-                    address.Ciphertext, address.Iv, address.Tag, address.EncryptedDataKey);
-                endereco = JsonSerializer.Deserialize<EnderecoInfo>(enderecoJson);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Erro ao descriptografar endereço do usuário {UserId}", userId);
-            }
-        }
+        var enderecoJson = await DecryptFieldAsync(
+            address?.Ciphertext, address?.Iv, address?.Tag, address?.EncryptedDataKey,
+            "endereço", userId);
+
+        EnderecoInfo? endereco = null;
+        if (enderecoJson is not null)
+            endereco = JsonSerializer.Deserialize<EnderecoInfo>(enderecoJson);
 
         return (cpf, rg, endereco);
+    }
+
+    private async Task<string?> DecryptFieldAsync(
+        byte[]? ciphertext, byte[]? iv, byte[]? tag, byte[]? encryptedDataKey,
+        string fieldName, Guid userId)
+    {
+        if (ciphertext is null || iv is null || tag is null || encryptedDataKey is null)
+            return null;
+
+        try
+        {
+            return await _encryptionService.DecryptAsync(ciphertext, iv, tag, encryptedDataKey);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Erro ao descriptografar {FieldName} do usuário {UserId}", fieldName, userId);
+            return null;
+        }
     }
 
     private static AuthResponse BuildAuthResponse(string token, string refreshToken, User user, IList<string> roles) => new()
