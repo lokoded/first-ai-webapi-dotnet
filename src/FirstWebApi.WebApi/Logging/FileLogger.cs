@@ -40,6 +40,9 @@ public class FileLoggerProvider : ILoggerProvider
 
 public class FileLogger : ILogger
 {
+    private static readonly HashSet<string> SensitiveKeyTerms =
+        ["cpf", "rg", "senha", "password", "token", "secretkey", "accesskey"];
+
     private readonly string _categoryName;
     private readonly string _filePath;
     private readonly string _format;
@@ -85,17 +88,23 @@ public class FileLogger : ILogger
         {
             foreach (var kv in structure)
             {
-                if (kv.Key != "{OriginalFormat}")
+                if (kv.Key == "{OriginalFormat}") continue;
+
+                if (SensitiveKeyTerms.Any(term =>
+                        kv.Key.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0))
                 {
-                    try
-                    {
-                        _ = JsonSerializer.Serialize(kv.Value);
-                        logRecord[kv.Key] = kv.Value;
-                    }
-                    catch
-                    {
-                        logRecord[kv.Key] = kv.Value?.ToString();
-                    }
+                    logRecord[kv.Key] = "***REDACTED***";
+                    continue;
+                }
+
+                try
+                {
+                    _ = JsonSerializer.Serialize(kv.Value);
+                    logRecord[kv.Key] = kv.Value;
+                }
+                catch
+                {
+                    logRecord[kv.Key] = kv.Value?.ToString();
                 }
             }
         }
