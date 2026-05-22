@@ -94,8 +94,13 @@ tests/
 
 ## Workflow de Branches
 
-- Branches `feature/*`, `release/*` e `hotfix/*` devem ser deletadas local e remotamente após o merge da PR
-- Nunca manter branches merged localmente — `git branch -d` e `git push origin --delete`
+- Toda branch `feature/*` ou `fix/*` parte da `develop` e faz PR para `develop`
+- `hotfix/*` parte da `main` e faz PR para `main` (correção urgente em produção)
+- `release/*` parte da `develop` e faz PR para `main`
+- `main` só recebe merge via `develop` → `main` ou `hotfix/*` → `main`
+- Após merge de `hotfix/*` → `main`, fazer merge de volta para `develop`
+- Após qualquer PR mergir em `main`, sincronizar `develop` via `git rebase main` ou `git reset --hard main`
+- Branches merged são deletadas local e remotamente — `git branch -d` e `git push origin --delete`
 - Exceção: branches de longo prazo (`develop`, `main`)
 
 ## Workflow de Commits
@@ -127,3 +132,4 @@ tests/
 6. `User.Role` removido — autorização usa exclusivamente `ClaimTypes.Role` do Identity
 7. Integration tests compartilham banco `FirstWebApiDb_Test` — rodar em sequência (Collection)
 8. `appsettings.Testing.json` contém credenciais de desenvolvimento (banco local Docker) versionadas — CI sobrescreve com `secrets.*`. Isso é seguro porque as credenciais só funcionam no container Docker local.
+9. PRs de `feature/*` e `fix/*` devem SEMPRE targetar `develop`, nunca `main`. `main` só recebe PR de `develop` ou `hotfix/*`.
