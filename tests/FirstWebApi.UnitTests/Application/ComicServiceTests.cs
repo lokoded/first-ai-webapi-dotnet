@@ -10,6 +10,7 @@ namespace FirstWebApi.UnitTests.Application;
 public class ComicServiceTests
 {
     private readonly Mock<IComicRepository> _comicRepoMock;
+    private readonly Mock<IComicTypeRepository> _comicTypeRepoMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly ComicService _comicService;
     private readonly Guid _userId = Guid.NewGuid();
@@ -18,12 +19,13 @@ public class ComicServiceTests
     public ComicServiceTests()
     {
         _comicRepoMock = new Mock<IComicRepository>();
+        _comicTypeRepoMock = new Mock<IComicTypeRepository>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
-        _comicService = new ComicService(_comicRepoMock.Object, _unitOfWorkMock.Object);
+        _comicService = new ComicService(_comicRepoMock.Object, _unitOfWorkMock.Object, _comicTypeRepoMock.Object);
     }
 
     [Fact]
-    public async Task GetAllAsync_DeveRetornarComicsDoUsuario()
+    public async Task GetAllAsync_ShouldReturnUserComics()
     {
         var comics = new List<Comic>
         {
@@ -43,7 +45,7 @@ public class ComicServiceTests
     }
 
     [Fact]
-    public async Task GetByIdAsync_ComComicDoUsuario_DeveRetornarComic()
+    public async Task GetByIdAsync_WithUserComic_ShouldReturnComic()
     {
         var comic = new Comic("Batman", "https://exemplo.com/batman", _userId, _comicTypeId);
         _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id)).ReturnsAsync(comic);
@@ -55,7 +57,7 @@ public class ComicServiceTests
     }
 
     [Fact]
-    public async Task GetByIdAsync_ComComicDeOutroUsuario_DeveRetornarNull()
+    public async Task GetByIdAsync_WithOtherUserComic_ShouldReturnNull()
     {
         var outroUserId = Guid.NewGuid();
         var comic = new Comic("Batman", "https://exemplo.com/batman", outroUserId, _comicTypeId);
@@ -67,7 +69,7 @@ public class ComicServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_DeveAdicionarERetornarComic()
+    public async Task CreateAsync_ShouldAddAndReturnComic()
     {
         var request = new ComicRequest
         {
@@ -75,6 +77,9 @@ public class ComicServiceTests
             WebUrl = "https://exemplo.com/batman",
             ComicTypeId = _comicTypeId
         };
+
+        _comicTypeRepoMock.Setup(r => r.GetByIdAsync(_comicTypeId))
+            .ReturnsAsync(new ComicType("HQ"));
 
         Comic? captured = null;
         _comicRepoMock.Setup(r => r.AddAsync(It.IsAny<Comic>()))
@@ -95,7 +100,7 @@ public class ComicServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_ComComicDoUsuario_DeveAtualizarERetornar()
+    public async Task UpdateAsync_WithUserComic_ShouldUpdateAndReturn()
     {
         var comic = new Comic("Batman", "https://exemplo.com/batman", _userId, _comicTypeId);
         var request = new ComicRequest
@@ -116,7 +121,7 @@ public class ComicServiceTests
     }
 
     [Fact]
-    public async Task UpdateAsync_ComComicDeOutroUsuario_DeveRetornarNull()
+    public async Task UpdateAsync_WithOtherUserComic_ShouldReturnNull()
     {
         var outroUserId = Guid.NewGuid();
         var comic = new Comic("Batman", "https://exemplo.com/batman", outroUserId, _comicTypeId);
@@ -135,7 +140,7 @@ public class ComicServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_ComComicDoUsuario_DeveRemoverERetornarTrue()
+    public async Task DeleteAsync_WithUserComic_ShouldRemoveAndReturnTrue()
     {
         var comic = new Comic("Batman", "https://exemplo.com/batman", _userId, _comicTypeId);
         _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id)).ReturnsAsync(comic);
@@ -148,7 +153,7 @@ public class ComicServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_ComComicDeOutroUsuario_DeveRetornarFalse()
+    public async Task DeleteAsync_WithOtherUserComic_ShouldReturnFalse()
     {
         var outroUserId = Guid.NewGuid();
         var comic = new Comic("Batman", "https://exemplo.com/batman", outroUserId, _comicTypeId);
@@ -161,7 +166,7 @@ public class ComicServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_ComComicInexistente_DeveRetornarFalse()
+    public async Task DeleteAsync_WithNonExistentComic_ShouldReturnFalse()
     {
         _comicRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((Comic?)null);
 

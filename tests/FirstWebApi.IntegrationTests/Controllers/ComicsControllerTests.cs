@@ -61,7 +61,7 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task PostComic_ComDadosValidos_DeveRetornar201()
+    public async Task PostComic_WithValidData_ShouldReturn201()
     {
         var token = await RegisterAndGetTokenAsync();
         _client.DefaultRequestHeaders.Authorization =
@@ -92,7 +92,7 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task GetComics_SemToken_DeveRetornar401()
+    public async Task GetComics_WithoutToken_ShouldReturn401()
     {
         _client.DefaultRequestHeaders.Authorization = null;
 
@@ -102,7 +102,7 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task PostComic_ComTituloVazio_DeveRetornar400()
+    public async Task PostComic_WithEmptyTitle_ShouldReturn400()
     {
         var token = await RegisterAndGetTokenAsync();
         _client.DefaultRequestHeaders.Authorization =
@@ -125,7 +125,7 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task PostComic_ComWebUrlInvalida_DeveRetornar400()
+    public async Task PostComic_WithInvalidWebUrl_ShouldReturn400()
     {
         var token = await RegisterAndGetTokenAsync();
         _client.DefaultRequestHeaders.Authorization =
@@ -148,7 +148,7 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task PostComic_ComComicTypeInexistente_DeveRetornar500()
+    public async Task PostComic_WithInvalidComicTypeId_ShouldReturn404()
     {
         var token = await RegisterAndGetTokenAsync();
         _client.DefaultRequestHeaders.Authorization =
@@ -167,6 +167,41 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
 
         var response = await _client.PostAsync("/api/comics", content);
 
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.InternalServerError);
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task GetComicById_WithNonExistentId_ShouldReturn404()
+    {
+        var token = await RegisterAndGetTokenAsync();
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await _client.GetAsync($"/api/comics/{Guid.NewGuid()}");
+
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task UpdateComic_WithNonExistentId_ShouldReturn404()
+    {
+        var token = await RegisterAndGetTokenAsync();
+        _client.DefaultRequestHeaders.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        var request = new ComicRequest
+        {
+            Titulo = "Updated",
+            WebUrl = "https://exemplo.com/updated",
+            ComicTypeId = Guid.NewGuid()
+        };
+
+        var content = new StringContent(
+            JsonSerializer.Serialize(request),
+            Encoding.UTF8, "application/json");
+
+        var response = await _client.PutAsync($"/api/comics/{Guid.NewGuid()}", content);
+
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
     }
 }

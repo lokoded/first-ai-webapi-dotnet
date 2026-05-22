@@ -20,7 +20,7 @@ public class ComicTypeServiceTests
     }
 
     [Fact]
-    public async Task GetAllAsync_DeveRetornarTodosOsTipos()
+    public async Task GetAllAsync_ShouldReturnAllTypes()
     {
         var types = new List<ComicType>
         {
@@ -40,7 +40,7 @@ public class ComicTypeServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_DeveAdicionarERetornarComicType()
+    public async Task CreateAsync_ShouldAddAndReturnComicType()
     {
         _comicTypeRepoMock.Setup(r => r.AddAsync(It.IsAny<ComicType>()))
             .Returns(Task.CompletedTask);
@@ -55,7 +55,7 @@ public class ComicTypeServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_ComTipoSemComics_DeveRemoverERetornarTrue()
+    public async Task DeleteAsync_WithTypeWithoutComics_ShouldRemoveAndReturnTrue()
     {
         var comicType = new ComicType("Mangá");
         _comicTypeRepoMock.Setup(r => r.GetByIdAsync(comicType.Id)).ReturnsAsync(comicType);
@@ -69,7 +69,7 @@ public class ComicTypeServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_ComTipoComComics_DeveLancarExcecao()
+    public async Task DeleteAsync_WithTypeWithComics_ShouldThrowException()
     {
         var comicType = new ComicType("Mangá");
         _comicTypeRepoMock.Setup(r => r.GetByIdAsync(comicType.Id)).ReturnsAsync(comicType);
@@ -82,7 +82,7 @@ public class ComicTypeServiceTests
     }
 
     [Fact]
-    public async Task DeleteAsync_ComTipoInexistente_DeveRetornarFalse()
+    public async Task DeleteAsync_WithNonExistentType_ShouldReturnFalse()
     {
         _comicTypeRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((ComicType?)null);
 

@@ -50,7 +50,7 @@ public class ComicTypesControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task GetComicTypes_ComTokenValido_DeveRetornar200()
+    public async Task GetComicTypes_WithValidToken_ShouldReturn200()
     {
         var token = await RegisterAndGetTokenAsync();
         _client.DefaultRequestHeaders.Authorization =
@@ -67,7 +67,7 @@ public class ComicTypesControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task GetComicTypes_SemToken_DeveRetornar401()
+    public async Task GetComicTypes_WithoutToken_ShouldReturn401()
     {
         _client.DefaultRequestHeaders.Authorization = null;
 
@@ -77,7 +77,7 @@ public class ComicTypesControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task AdminPostComicType_ComUsuarioSemRoleAdmin_DeveRetornar403()
+    public async Task AdminPostComicType_WithoutAdminRole_ShouldReturn403()
     {
         var token = await RegisterAndGetTokenAsync();
         _client.DefaultRequestHeaders.Authorization =
@@ -95,7 +95,7 @@ public class ComicTypesControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task AdminPostComicType_SemToken_DeveRetornar401()
+    public async Task AdminPostComicType_WithoutToken_ShouldReturn401()
     {
         _client.DefaultRequestHeaders.Authorization = null;
 
@@ -110,7 +110,7 @@ public class ComicTypesControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task AdminDeleteComicType_SemToken_DeveRetornar401()
+    public async Task AdminDeleteComicType_WithoutToken_ShouldReturn401()
     {
         _client.DefaultRequestHeaders.Authorization = null;
 
@@ -165,7 +165,7 @@ public class ComicTypesControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task AdminPostComicType_ComUsuarioAdmin_DeveRetornar201()
+    public async Task AdminPostComicType_WithAdminUser_ShouldReturn201()
     {
         var token = await RegisterAndGetAdminTokenAsync();
         _client.DefaultRequestHeaders.Authorization =
