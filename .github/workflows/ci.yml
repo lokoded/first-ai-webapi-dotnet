@@ -28,8 +28,6 @@ jobs:
         image: redis:alpine
         ports:
           - 6379:6379
-        options: --entrypoint "redis-server"
-        cmd: --requirepass "RedisP@ss123"
 
       localstack:
         image: localstack/localstack:4.0
