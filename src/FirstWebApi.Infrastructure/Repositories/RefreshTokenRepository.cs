@@ -27,6 +27,14 @@ public class RefreshTokenRepository : IRefreshTokenRepository
             .ToListAsync();
     }
 
+    public async Task<int> DeleteExpiredAsync(int keepDays)
+    {
+        var cutoff = DateTime.UtcNow.AddDays(-keepDays);
+        return await _context.RefreshTokens
+            .Where(t => t.ExpiresAt < DateTime.UtcNow && t.CreatedAt < cutoff)
+            .ExecuteDeleteAsync();
+    }
+
     public async Task AddAsync(RefreshToken refreshToken)
     {
         await _context.RefreshTokens.AddAsync(refreshToken);

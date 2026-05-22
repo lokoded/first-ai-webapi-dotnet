@@ -215,6 +215,8 @@ public class AuthService : IAuthService
             throw new KeyNotFoundException("Usuário não encontrado.");
 
         var roles = await _userManager.GetRolesAsync(user);
+        var (cpf, rg, endereco) = await DecryptUserDataAsync(user, userId);
+
         var response = new UserResponse
         {
             Id = user.Id,
@@ -222,14 +224,61 @@ public class AuthService : IAuthService
             UserName = user.UserName!,
             Email = user.Email!,
             Role = roles.FirstOrDefault() ?? "User",
-            CreatedAt = user.CreatedAt
+            CreatedAt = user.CreatedAt,
+            HasFullData = false
         };
+
+        if (cpf != null)
+            response.Cpf = MaskCpf(cpf);
+
+        if (rg != null)
+            response.Rg = MaskRg(rg);
+
+        if (endereco != null)
+            response.Endereco = MaskEndereco(endereco);
+
+        return response;
+    }
+
+    public async Task<UserResponse> GetFullProfileAsync(Guid userId, string senha)
+    {
+        var user = await _userRepository.GetByIdAsync(userId);
+        if (user == null)
+            throw new KeyNotFoundException("Usuário não encontrado.");
+
+        var passwordValid = await _userManager.CheckPasswordAsync(user, senha);
+        if (!passwordValid)
+            throw new UnauthorizedAccessException("Senha inválida. Reautenticação necessária.");
+
+        var roles = await _userManager.GetRolesAsync(user);
+        var (cpf, rg, endereco) = await DecryptUserDataAsync(user, userId);
+
+        return new UserResponse
+        {
+            Id = user.Id,
+            Nome = user.Nome,
+            UserName = user.UserName!,
+            Email = user.Email!,
+            Cpf = cpf,
+            Rg = rg,
+            Endereco = endereco,
+            Role = roles.FirstOrDefault() ?? "User",
+            CreatedAt = user.CreatedAt,
+            HasFullData = true
+        };
+    }
+
+    private async Task<(string? cpf, string? rg, EnderecoInfo? endereco)> DecryptUserDataAsync(User user, Guid userId)
+    {
+        string? cpf = null;
+        string? rg = null;
+        EnderecoInfo? endereco = null;
 
         if (user.CpfCiphertext != null && user.CpfIv != null && user.CpfTag != null && user.CpfEncryptedDataKey != null)
         {
             try
             {
-                response.Cpf = await _encryptionService.DecryptAsync(
+                cpf = await _encryptionService.DecryptAsync(
                     user.CpfCiphertext, user.CpfIv, user.CpfTag, user.CpfEncryptedDataKey);
             }
             catch (Exception ex)
@@ -242,7 +291,7 @@ public class AuthService : IAuthService
         {
             try
             {
-                response.Rg = await _encryptionService.DecryptAsync(
+                rg = await _encryptionService.DecryptAsync(
                     user.RgCiphertext, user.RgIv, user.RgTag, user.RgEncryptedDataKey);
             }
             catch (Exception ex)
@@ -258,7 +307,7 @@ public class AuthService : IAuthService
             {
                 var enderecoJson = await _encryptionService.DecryptAsync(
                     address.Ciphertext, address.Iv, address.Tag, address.EncryptedDataKey);
-                response.Endereco = JsonSerializer.Deserialize<EnderecoInfo>(enderecoJson);
+                endereco = JsonSerializer.Deserialize<EnderecoInfo>(enderecoJson);
             }
             catch (Exception ex)
             {
@@ -266,8 +315,30 @@ public class AuthService : IAuthService
             }
         }
 
-        return response;
+        return (cpf, rg, endereco);
     }
+
+    private static string MaskCpf(string cpf)
+    {
+        if (string.IsNullOrEmpty(cpf) || cpf.Length < 11)
+            return cpf;
+
+        return $"***.{cpf[3..6]}.{cpf[6..9]}-**";
+    }
+
+    private static string MaskRg(string rg)
+    {
+        if (string.IsNullOrEmpty(rg) || rg.Length < 4)
+            return rg;
+
+        return $"*****-{rg[^4..]}";
+    }
+
+    private static EnderecoInfo MaskEndereco(EnderecoInfo endereco) => new()
+    {
+        Cidade = endereco.Cidade,
+        Estado = endereco.Estado
+    };
 
     private static User IdentityUserPlaceholder() => new("", "", "");
 }

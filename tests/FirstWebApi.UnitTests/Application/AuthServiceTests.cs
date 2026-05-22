@@ -49,7 +49,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task RegisterAsync_ComDadosValidos_DeveRetornarToken()
+    public async Task RegisterAsync_WithValidData_ShouldReturnToken()
     {
         _userRepoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>()))
             .ReturnsAsync((User?)null);
@@ -86,7 +86,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task RegisterAsync_ComEmailExistente_DeveLancarExcecao()
+    public async Task RegisterAsync_WithExistingEmail_ShouldThrowException()
     {
         _userRepoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>()))
             .ReturnsAsync(new User("João", "joao_123", "joao@email.com"));
@@ -106,7 +106,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task LoginAsync_ComCredenciaisValidas_DeveRetornarToken()
+    public async Task LoginAsync_WithValidCredentials_ShouldReturnToken()
     {
         var user = new User("João", "joao_123", "joao@email.com");
 
@@ -135,7 +135,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task LoginAsync_ComSenhaInvalida_DeveLancarExcecao()
+    public async Task LoginAsync_WithInvalidPassword_ShouldThrowException()
     {
         var user = new User("João", "joao_123", "joao@email.com");
 
@@ -157,7 +157,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task RefreshTokenAsync_ComTokenValido_DeveRetornarNovoToken()
+    public async Task RefreshTokenAsync_WithValidToken_ShouldReturnNewToken()
     {
         var user = new User("João", "joao_123", "joao@email.com");
         var storedToken = new RefreshToken(user.Id, "token-hash", DateTime.UtcNow.AddDays(7));
@@ -184,7 +184,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task RefreshTokenAsync_ComTokenInexistente_DeveLancarExcecao()
+    public async Task RefreshTokenAsync_WithNonExistentToken_ShouldThrowException()
     {
         _tokenServiceMock.Setup(t => t.HashToken(It.IsAny<string>()))
             .Returns("invalid-hash");
@@ -197,7 +197,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task RefreshTokenAsync_ComTokenExpirado_DeveLancarExcecao()
+    public async Task RefreshTokenAsync_WithExpiredToken_ShouldThrowException()
     {
         var storedToken = new RefreshToken(Guid.NewGuid(), "token-hash", DateTime.UtcNow.AddDays(-1));
 
@@ -212,7 +212,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task RefreshTokenAsync_ComTokenRevogado_DeveLancarExcecao()
+    public async Task RefreshTokenAsync_WithRevokedToken_ShouldThrowException()
     {
         var storedToken = new RefreshToken(Guid.NewGuid(), "token-hash", DateTime.UtcNow.AddDays(7));
         storedToken.Revoke();
@@ -231,7 +231,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task RevokeRefreshTokensAsync_DeveRevogarTokensAtivos()
+    public async Task RevokeRefreshTokensAsync_ShouldRevokeActiveTokens()
     {
         var userId = Guid.NewGuid();
         var token1 = new RefreshToken(userId, "hash1", DateTime.UtcNow.AddDays(7));
@@ -251,7 +251,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task GetProfileAsync_ComUsuarioExistente_DeveRetornarProfile()
+    public async Task GetProfileAsync_WithExistingUser_ShouldReturnProfile()
     {
         var userId = Guid.NewGuid();
         var user = new User("João", "joao_123", "joao@email.com");
@@ -269,7 +269,7 @@ public class AuthServiceTests
     }
 
     [Fact]
-    public async Task GetProfileAsync_ComUsuarioInexistente_DeveLancarExcecao()
+    public async Task GetProfileAsync_WithNonExistentUser_ShouldThrowException()
     {
         _userRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
             .ReturnsAsync((User?)null);

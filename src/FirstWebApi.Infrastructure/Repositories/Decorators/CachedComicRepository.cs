@@ -2,13 +2,16 @@ using System.Text.Json;
 using FirstWebApi.Domain.Entities;
 using FirstWebApi.Domain.Interfaces;
 using Microsoft.Extensions.Caching.Distributed;
+using StackExchange.Redis;
 
 namespace FirstWebApi.Infrastructure.Repositories.Decorators;
 
-public class CachedComicRepository : IComicRepository
+public class CachedComicRepository(IComicRepository inner, IDistributedCache cache, IConnectionMultiplexer redis) : IComicRepository
 {
-    private readonly IComicRepository _inner;
-    private readonly IDistributedCache _cache;
+    private readonly IComicRepository _inner = inner;
+    private readonly IDistributedCache _cache = cache;
+    private readonly IConnectionMultiplexer _redis = redis;
+
     private static readonly TimeSpan Ttl = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan PaginatedTtl = TimeSpan.FromSeconds(30);
 
@@ -16,12 +19,6 @@ public class CachedComicRepository : IComicRepository
     {
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase
     };
-
-    public CachedComicRepository(IComicRepository inner, IDistributedCache cache)
-    {
-        _inner = inner;
-        _cache = cache;
-    }
 
     public async Task<List<Comic>> GetByUserIdAsync(Guid userId)
         => await _inner.GetByUserIdAsync(userId);
@@ -60,21 +57,31 @@ public class CachedComicRepository : IComicRepository
     public async Task AddAsync(Comic comic)
     {
         await _inner.AddAsync(comic);
-        await _cache.RemoveAsync($"comics:user:{comic.UserId}:page:*");
+        await InvalidatePaginatedCacheAsync(comic.UserId);
     }
 
     public async Task UpdateAsync(Comic comic)
     {
         await _inner.UpdateAsync(comic);
         await _cache.RemoveAsync($"comic:{comic.Id}");
-        await _cache.RemoveAsync($"comics:user:{comic.UserId}:page:*");
+        await InvalidatePaginatedCacheAsync(comic.UserId);
     }
 
     public async Task DeleteAsync(Comic comic)
     {
         await _inner.DeleteAsync(comic);
         await _cache.RemoveAsync($"comic:{comic.Id}");
-        await _cache.RemoveAsync($"comics:user:{comic.UserId}:page:*");
+        await InvalidatePaginatedCacheAsync(comic.UserId);
+    }
+
+    private async Task InvalidatePaginatedCacheAsync(Guid userId)
+    {
+        var server = _redis.GetServer(_redis.GetEndPoints()[0]);
+        var keys = server.KeysAsync(pattern: $"comics:user:{userId}:page:*");
+        var db = _redis.GetDatabase();
+        var keyArray = await keys.ToArrayAsync();
+        if (keyArray.Length > 0)
+            await db.KeyDeleteAsync(keyArray);
     }
 
     private sealed class CachedPaginatedResult

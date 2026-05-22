@@ -44,7 +44,7 @@ public class FileLogger : ILogger
     private readonly string _filePath;
     private readonly string _format;
     private readonly IHttpContextAccessor _httpContextAccessor;
-    private static readonly object Lock = new();
+    private readonly object _lock = new();
 
     public FileLogger(string categoryName, string filePath, string format, IHttpContextAccessor httpContextAccessor)
     {
@@ -115,7 +115,7 @@ public class FileLogger : ILogger
                 $"[{logRecord["Timestamp"]}] {logRecord["Level"]}: {logRecord["Message"]}";
         }
 
-        lock (Lock)
+        lock (_lock)
         {
             File.AppendAllText(fileName, logLine + Environment.NewLine);
         }

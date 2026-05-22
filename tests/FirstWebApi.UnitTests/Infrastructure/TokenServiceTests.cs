@@ -27,7 +27,7 @@ public class TokenServiceTests
     }
 
     [Fact]
-    public void GenerateToken_ComDadosValidos_DeveRetornarTokenJwt()
+    public void GenerateToken_WithValidData_ShouldReturnJwtToken()
     {
         var token = _tokenService.GenerateToken(
             Guid.NewGuid(), "teste@email.com", "Teste", ["User"]);
@@ -37,7 +37,7 @@ public class TokenServiceTests
     }
 
     [Fact]
-    public void GenerateToken_DeveConterClaimsCorretos()
+    public void GenerateToken_ShouldContainCorrectClaims()
     {
         var userId = Guid.NewGuid();
         var token = _tokenService.GenerateToken(
@@ -52,7 +52,7 @@ public class TokenServiceTests
     }
 
     [Fact]
-    public void ValidateToken_ComTokenInvalido_DeveRetornarNull()
+    public void ValidateToken_WithInvalidToken_ShouldReturnNull()
     {
         var principal = _tokenService.ValidateToken("token-invalido");
         principal.Should().BeNull();

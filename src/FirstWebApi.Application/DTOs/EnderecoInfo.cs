@@ -11,7 +11,7 @@ public class EnderecoInfo
     public string Cidade { get; set; } = string.Empty;
     public string Estado { get; set; } = string.Empty;
     public string Cep { get; set; } = string.Empty;
-    public string? Pais { get; set; }
+    public string Pais { get; set; } = string.Empty;
 
     [JsonIgnore]
     public bool IsEmpty =>

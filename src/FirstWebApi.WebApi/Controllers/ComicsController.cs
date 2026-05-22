@@ -2,7 +2,7 @@ using System.Security.Claims;
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
 using FirstWebApi.Application.Interfaces;
-using FirstWebApi.Application.Validators;
+using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -14,14 +14,10 @@ namespace FirstWebApi.WebApi.Controllers;
 [Route("api/comics")]
 [Authorize]
 [EnableRateLimiting("Default")]
-public class ComicsController : ControllerBase
+public class ComicsController(
+    IComicService comicService,
+    IValidator<ComicRequest> validator) : ControllerBase
 {
-    private readonly IComicService _comicService;
-
-    public ComicsController(IComicService comicService)
-    {
-        _comicService = comicService;
-    }
 
     private Guid GetUserId()
     {
@@ -41,7 +37,7 @@ public class ComicsController : ControllerBase
         if (userId == Guid.Empty)
             return Problem(detail: "Token inválido.", statusCode: 401, title: "Não autorizado");
 
-        var result = await _comicService.GetAllAsync(userId, page, pageSize);
+        var result = await comicService.GetAllAsync(userId, page, pageSize);
         return Ok(result);
     }
 
@@ -55,7 +51,7 @@ public class ComicsController : ControllerBase
         if (userId == Guid.Empty)
             return Problem(detail: "Token inválido.", statusCode: 401, title: "Não autorizado");
 
-        var result = await _comicService.GetByIdAsync(id, userId);
+        var result = await comicService.GetByIdAsync(id, userId);
         if (result is null)
             return Problem(detail: "Comic não encontrada.", statusCode: 404, title: "Não encontrado");
 
@@ -73,12 +69,11 @@ public class ComicsController : ControllerBase
         if (userId == Guid.Empty)
             return Problem(detail: "Token inválido.", statusCode: 401, title: "Não autorizado");
 
-        var validator = new ComicRequestValidator();
         var validation = await validator.ValidateAsync(request);
         if (!validation.IsValid)
             return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
-        var result = await _comicService.CreateAsync(request, userId);
+        var result = await comicService.CreateAsync(request, userId);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
@@ -93,12 +88,11 @@ public class ComicsController : ControllerBase
         if (userId == Guid.Empty)
             return Problem(detail: "Token inválido.", statusCode: 401, title: "Não autorizado");
 
-        var validator = new ComicRequestValidator();
         var validation = await validator.ValidateAsync(request);
         if (!validation.IsValid)
             return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
-        var result = await _comicService.UpdateAsync(id, request, userId);
+        var result = await comicService.UpdateAsync(id, request, userId);
         if (result is null)
             return Problem(detail: "Comic não encontrada.", statusCode: 404, title: "Não encontrado");
 
@@ -115,7 +109,7 @@ public class ComicsController : ControllerBase
         if (userId == Guid.Empty)
             return Problem(detail: "Token inválido.", statusCode: 401, title: "Não autorizado");
 
-        var success = await _comicService.DeleteAsync(id, userId);
+        var success = await comicService.DeleteAsync(id, userId);
         if (!success)
             return Problem(detail: "Comic não encontrada.", statusCode: 404, title: "Não encontrado");
 

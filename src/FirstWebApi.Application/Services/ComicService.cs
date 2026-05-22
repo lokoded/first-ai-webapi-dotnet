@@ -6,24 +6,18 @@ using FirstWebApi.Domain.Interfaces;
 
 namespace FirstWebApi.Application.Services;
 
-public class ComicService : IComicService
+public class ComicService(
+    IComicRepository comicRepository,
+    IUnitOfWork unitOfWork,
+    IComicTypeRepository comicTypeRepository) : IComicService
 {
-    private readonly IComicRepository _comicRepository;
-    private readonly IUnitOfWork _unitOfWork;
-
-    public ComicService(IComicRepository comicRepository, IUnitOfWork unitOfWork)
-    {
-        _comicRepository = comicRepository;
-        _unitOfWork = unitOfWork;
-    }
-
     public async Task<PaginatedResult<ComicResponse>> GetAllAsync(Guid userId, int page = 1, int pageSize = 20)
     {
         if (page < 1) page = 1;
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
 
-        var (items, totalCount) = await _comicRepository.GetPaginatedByUserIdAsync(userId, page, pageSize);
+        var (items, totalCount) = await comicRepository.GetPaginatedByUserIdAsync(userId, page, pageSize);
 
         return new PaginatedResult<ComicResponse>
         {
@@ -36,7 +30,7 @@ public class ComicService : IComicService
 
     public async Task<ComicResponse?> GetByIdAsync(Guid id, Guid userId)
     {
-        var comic = await _comicRepository.GetByIdAsync(id);
+        var comic = await comicRepository.GetByIdAsync(id);
         if (comic == null || comic.UserId != userId)
             return null;
         return MapToResponse(comic);
@@ -44,31 +38,42 @@ public class ComicService : IComicService
 
     public async Task<ComicResponse> CreateAsync(ComicRequest request, Guid userId)
     {
+        var comicType = await comicTypeRepository.GetByIdAsync(request.ComicTypeId);
+        if (comicType is null)
+            throw new KeyNotFoundException("Tipo de quadrinho não encontrado.");
+
         var comic = new Comic(request.Titulo, request.WebUrl, userId, request.ComicTypeId, request.Observacao);
-        await _comicRepository.AddAsync(comic);
-        await _unitOfWork.SaveChangesAsync();
+        await comicRepository.AddAsync(comic);
+        await unitOfWork.SaveChangesAsync();
         return MapToResponse(comic);
     }
 
     public async Task<ComicResponse?> UpdateAsync(Guid id, ComicRequest request, Guid userId)
     {
-        var comic = await _comicRepository.GetByIdAsync(id);
+        var comic = await comicRepository.GetByIdAsync(id);
         if (comic == null || comic.UserId != userId)
             return null;
 
+        if (request.ComicTypeId != comic.ComicTypeId)
+        {
+            var comicType = await comicTypeRepository.GetByIdAsync(request.ComicTypeId);
+            if (comicType is null)
+                throw new KeyNotFoundException("Tipo de quadrinho não encontrado.");
+        }
+
         comic.Update(request.Titulo, request.WebUrl, request.ComicTypeId, request.Observacao);
-        await _unitOfWork.SaveChangesAsync();
+        await unitOfWork.SaveChangesAsync();
         return MapToResponse(comic);
     }
 
     public async Task<bool> DeleteAsync(Guid id, Guid userId)
     {
-        var comic = await _comicRepository.GetByIdAsync(id);
+        var comic = await comicRepository.GetByIdAsync(id);
         if (comic == null || comic.UserId != userId)
             return false;
 
-        await _comicRepository.DeleteAsync(comic);
-        await _unitOfWork.SaveChangesAsync();
+        await comicRepository.DeleteAsync(comic);
+        await unitOfWork.SaveChangesAsync();
         return true;
     }
 

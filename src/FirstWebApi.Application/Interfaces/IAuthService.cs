@@ -10,4 +10,5 @@ public interface IAuthService
     Task<AuthResponse> RefreshTokenAsync(string refreshToken);
     Task RevokeRefreshTokensAsync(Guid userId);
     Task<UserResponse> GetProfileAsync(Guid userId);
+    Task<UserResponse> GetFullProfileAsync(Guid userId, string senha);
 }

@@ -49,7 +49,7 @@ public class UserControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task GetMe_ComTokenValido_DeveRetornar200()
+    public async Task GetMe_WithValidToken_ShouldReturn200()
     {
         var token = await GetTokenAsync();
         _client.DefaultRequestHeaders.Authorization =
@@ -69,7 +69,7 @@ public class UserControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task GetMe_SemToken_DeveRetornar401()
+    public async Task GetMe_WithoutToken_ShouldReturn401()
     {
         _client.DefaultRequestHeaders.Authorization = null;
 
@@ -79,7 +79,7 @@ public class UserControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task GetMe_ComTokenInvalido_DeveRetornar401()
+    public async Task GetMe_WithInvalidToken_ShouldReturn401()
     {
         _client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", "token-falso-invalido");

@@ -19,7 +19,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
 
     [Fact]
-    public async Task PostRegister_ComDadosValidos_DeveRetornar201()
+    public async Task PostRegister_WithValidData_ShouldReturn201()
     {
         var request = new RegisterRequest
         {
@@ -49,7 +49,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task PostRegister_ComEmailDuplicado_DeveRetornar409()
+    public async Task PostRegister_WithDuplicateEmail_ShouldReturn409()
     {
         var email = $"duplicado_{Guid.NewGuid()}@email.com";
 
@@ -74,7 +74,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task PostLogin_ComCredenciaisValidas_DeveRetornar200()
+    public async Task PostLogin_WithValidCredentials_ShouldReturn200()
     {
         var email = $"login_{Guid.NewGuid()}@email.com";
 
@@ -116,7 +116,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task PostLogin_ComSenhaInvalida_DeveRetornar401()
+    public async Task PostLogin_WithInvalidPassword_ShouldReturn401()
     {
         var login = new LoginRequest
         {
@@ -134,7 +134,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task PostRegister_ComCpfInvalido_DeveRetornar400()
+    public async Task PostRegister_WithInvalidCpf_ShouldReturn400()
     {
         var request = new RegisterRequest
         {
@@ -155,7 +155,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task PostRegister_ComSenhaFraca_DeveRetornar400()
+    public async Task PostRegister_WithWeakPassword_ShouldReturn400()
     {
         var request = new RegisterRequest
         {
@@ -176,7 +176,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task PostRegister_ComEmailInvalido_DeveRetornar400()
+    public async Task PostRegister_WithInvalidEmail_ShouldReturn400()
     {
         var request = new RegisterRequest
         {
@@ -197,7 +197,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task PostRegister_SemCpfESemRg_DeveRetornar400()
+    public async Task PostRegister_WithoutCpfAndRg_ShouldReturn400()
     {
         var request = new RegisterRequest
         {
@@ -217,7 +217,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task PostRefresh_ComTokenValido_DeveRetornarNovosTokens()
+    public async Task PostRefresh_WithValidToken_ShouldReturnNewTokens()
     {
         var email = $"refresh_{Guid.NewGuid()}@email.com";
         var register = new RegisterRequest
@@ -256,7 +256,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task PostRevoke_ComUsuarioAutenticado_DeveRevogarTokens()
+    public async Task PostRevoke_WithAuthenticatedUser_ShouldRevokeTokens()
     {
         var email = $"revoke_{Guid.NewGuid()}@email.com";
         var register = new RegisterRequest
