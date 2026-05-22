@@ -15,6 +15,7 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
+using StackExchange.Redis;
 using System.Threading.RateLimiting;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -95,6 +96,12 @@ builder.Services.AddStackExchangeRedisCache(options =>
 
 builder.Services.AddMemoryCache();
 
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var config = builder.Configuration.GetConnectionString("Redis");
+    return ConnectionMultiplexer.Connect(config ?? "localhost:6379");
+});
+
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAddressRepository, AddressRepository>();
 builder.Services.AddScoped<IComicRepository, ComicRepository>();
@@ -110,6 +117,7 @@ builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEncryptionService, KmsEncryptionService>();
 builder.Services.AddScoped<IComicService, ComicService>();
 builder.Services.AddScoped<IComicTypeService, ComicTypeService>();
+builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
 // Rate Limiting — proteção contra abuso (OWASP A04, A07)
 // Endpoints de auth (login/register) têm limite mais restritivo
