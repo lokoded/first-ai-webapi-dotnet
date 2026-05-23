@@ -1,4 +1,5 @@
 using FirstWebApi.Application.DTOs.Request;
+using FirstWebApi.Application.Exceptions;
 using FirstWebApi.Application.Services;
 using FirstWebApi.Domain.Entities;
 using FirstWebApi.Domain.Interfaces;
@@ -172,5 +173,94 @@ public class ComicServiceTests
         var result = await _comicService.DeleteAsync(Guid.NewGuid(), _userId);
 
         result.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_WithNonExistentComic_ShouldReturnNull()
+    {
+        _comicRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync((Comic?)null);
+
+        var result = await _comicService.GetByIdAsync(Guid.NewGuid(), _userId);
+
+        result.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithEmptyTitle_ShouldThrowException()
+    {
+        var request = new ComicRequest
+        {
+            Titulo = "",
+            WebUrl = "https://exemplo.com/batman",
+            ComicTypeId = _comicTypeId
+        };
+
+        Func<Task> act = () => _comicService.CreateAsync(request, _userId);
+
+        await act.Should().ThrowAsync<BadRequestException>()
+            .WithMessage("Título é obrigatório.");
+    }
+
+    [Fact]
+    public async Task CreateAsync_WithComicTypeNotFound_ShouldThrowException()
+    {
+        var request = new ComicRequest
+        {
+            Titulo = "Batman",
+            WebUrl = "https://exemplo.com/batman",
+            ComicTypeId = _comicTypeId
+        };
+
+        _comicTypeRepoMock.Setup(r => r.GetByIdAsync(_comicTypeId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ComicType?)null);
+
+        Func<Task> act = () => _comicService.CreateAsync(request, _userId);
+
+        await act.Should().ThrowAsync<KeyNotFoundException>()
+            .WithMessage("Tipo de quadrinho não encontrado.");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_WithDifferentComicTypeNotFound_ShouldThrowException()
+    {
+        var outroComicTypeId = Guid.NewGuid();
+        var comic = CreateComic();
+        var request = new ComicRequest
+        {
+            Titulo = "Batman 2024",
+            WebUrl = "https://exemplo.com/batman-novo",
+            ComicTypeId = outroComicTypeId
+        };
+
+        _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id, It.IsAny<CancellationToken>())).ReturnsAsync(comic);
+        _comicTypeRepoMock.Setup(r => r.GetByIdAsync(outroComicTypeId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((ComicType?)null);
+
+        Func<Task> act = () => _comicService.UpdateAsync(comic.Id, request, _userId);
+
+        await act.Should().ThrowAsync<KeyNotFoundException>()
+            .WithMessage("Tipo de quadrinho não encontrado.");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ShouldNormalizePageToMinimum()
+    {
+        _comicRepoMock.Setup(r => r.GetPaginatedByUserIdAsync(_userId, 1, 20, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((new List<Comic>(), 0));
+
+        var result = await _comicService.GetAllAsync(_userId, page: 0);
+
+        result.Page.Should().Be(1);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ShouldNormalizePageSizeToMaximum()
+    {
+        _comicRepoMock.Setup(r => r.GetPaginatedByUserIdAsync(_userId, 1, 100, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((new List<Comic>(), 0));
+
+        var result = await _comicService.GetAllAsync(_userId, pageSize: 200);
+
+        result.PageSize.Should().Be(100);
     }
 }

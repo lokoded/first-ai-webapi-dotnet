@@ -248,4 +248,129 @@ public class AuthServiceTests
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
+    [Fact]
+    public async Task RegisterAsync_WithBothCpfAndRgEmpty_ShouldThrowException()
+    {
+        var request = new RegisterRequest
+        {
+            Nome = "João",
+            UserName = "joao_123",
+            Email = "joao@email.com",
+            Senha = "SenhaForte123"
+        };
+
+        Func<Task> act = () => _authService.RegisterAsync(request);
+
+        await act.Should().ThrowAsync<BadRequestException>()
+            .WithMessage("CPF ou RG deve ser informado.");
+    }
+
+    [Fact]
+    public async Task RegisterAsync_WithExistingUserName_ShouldThrowException()
+    {
+        _userRepoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+        _userManagerMock.Setup(m => m.FindByNameAsync("joao_123"))
+            .ReturnsAsync(new User("João", "joao_123", "joao@email.com"));
+
+        var request = new RegisterRequest
+        {
+            Nome = "João",
+            UserName = "joao_123",
+            Email = "joao@email.com",
+            Senha = "SenhaForte123",
+            Cpf = "52998224725"
+        };
+
+        Func<Task> act = () => _authService.RegisterAsync(request);
+
+        await act.Should().ThrowAsync<ConflictException>()
+            .WithMessage("UserName já cadastrado.");
+    }
+
+    [Fact]
+    public async Task RegisterAsync_WithCreateUserFailing_ShouldThrowException()
+    {
+        _userRepoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+        _userManagerMock.Setup(m => m.FindByNameAsync(It.IsAny<string>()))
+            .ReturnsAsync((User?)null);
+        _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<User>(), It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Failed(new IdentityError { Description = "Senha muito curta" }));
+
+        var request = new RegisterRequest
+        {
+            Nome = "João",
+            UserName = "joao_123",
+            Email = "joao@email.com",
+            Senha = "Fraca1",
+            Cpf = "52998224725"
+        };
+
+        Func<Task> act = () => _authService.RegisterAsync(request);
+
+        await act.Should().ThrowAsync<BadRequestException>()
+            .WithMessage("Falha ao criar usuário.");
+    }
+
+    [Fact]
+    public async Task LoginAsync_WithLockedOutUser_ShouldThrowException()
+    {
+        var user = new User("João", "joao_123", "joao@email.com");
+
+        _userRepoMock.Setup(r => r.GetByEmailAsync("joao@email.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(user);
+        _userManagerMock.Setup(m => m.IsLockedOutAsync(user))
+            .ReturnsAsync(true);
+
+        var request = new LoginRequest
+        {
+            Email = "joao@email.com",
+            Senha = "SenhaForte123"
+        };
+
+        Func<Task> act = () => _authService.LoginAsync(request);
+
+        await act.Should().ThrowAsync<UnauthorizedException>()
+            .WithMessage("Conta temporariamente bloqueada por muitas tentativas inválidas. Tente novamente em 15 minutos.");
+    }
+
+    [Fact]
+    public async Task LoginAsync_WithEmailNotFound_ShouldThrowException()
+    {
+        _userRepoMock.Setup(r => r.GetByEmailAsync("naoexiste@email.com", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+        _userManagerMock.Setup(m => m.CheckPasswordAsync(It.IsAny<User>(), "fake"))
+            .ReturnsAsync(false);
+
+        var request = new LoginRequest
+        {
+            Email = "naoexiste@email.com",
+            Senha = "SenhaForte123"
+        };
+
+        Func<Task> act = () => _authService.LoginAsync(request);
+
+        await act.Should().ThrowAsync<UnauthorizedException>()
+            .WithMessage("Email ou senha inválidos.");
+    }
+
+    [Fact]
+    public async Task RefreshTokenAsync_WithUserNotFound_ShouldThrowException()
+    {
+        var storedToken = new RefreshToken(Guid.NewGuid(), "token-hash", DateTime.UtcNow.AddDays(7));
+
+        _tokenServiceMock.Setup(t => t.HashToken(It.IsAny<string>()))
+            .Returns("token-hash");
+        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(storedToken);
+        _userRepoMock.Setup(r => r.GetByIdAsync(storedToken.UserId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync((User?)null);
+        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
+
+        Func<Task> act = () => _authService.RefreshTokenAsync("valid-refresh-token");
+
+        await act.Should().ThrowAsync<UnauthorizedException>()
+            .WithMessage("Usuário não encontrado.");
+    }
 }

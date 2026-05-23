@@ -86,6 +86,12 @@ tests/
 - Rate limiting deve ser considerado em endpoints de auth
 - Refresh tokens para renovação segura de sessão
 
+## Cobertura de Código
+
+- Mínimo **70% line coverage** por projeto, validado no CI
+- Executar `dotnet test --settings coverlet.runsettings` para incluir cobertura
+- CI falha se qualquer projeto ficar abaixo de 70%
+
 ## Workflow de Branches
 
 - Toda branch `feature/*` ou `fix/*` parte da `develop` e faz PR para `develop`

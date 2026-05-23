@@ -41,7 +41,7 @@ Infraestrutura local:
   4. `dotnet build`
   5. `dotnet test` (unitários)
   6. `dotnet list package --vulnerable`
-  7. Cobertura de código (coverlet)
+  7. Cobertura de código (coverlet) — threshold mínimo 70% por projeto, falha se abaixo
 
 ### Pipeline de Security Scan
 - Trigger: push para `develop` e `main`
