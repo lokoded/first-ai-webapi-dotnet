@@ -3,61 +3,20 @@ using System.Text;
 using System.Text.Json;
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
-using FirstWebApi.Infrastructure.Data;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.AspNetCore.Mvc.Testing;
 using FluentAssertions;
 
 namespace FirstWebApi.IntegrationTests.Controllers;
 
-[Collection("Database")]
-public class UserControllerTests : IClassFixture<FirstWebApiFactory>
+public class UserControllerTests(FirstWebApiFactory factory) : IntegrationTestBase(factory)
 {
-    private readonly HttpClient _client;
-    private readonly FirstWebApiFactory _factory;
-
-    public UserControllerTests(FirstWebApiFactory factory)
-    {
-        _factory = factory;
-        _client = factory.CreateClient();
-    }
-
-
-    private async Task<string> GetTokenAsync()
-    {
-        var email = $"profile_{Guid.NewGuid()}@email.com";
-
-        var register = new RegisterRequest
-        {
-            Nome = "Profile Test",
-            UserName = $"profile_{Guid.NewGuid():N}"[..20],
-            Email = email,
-            Senha = "SenhaForte123",
-            Cpf = "529.982.247-25"
-        };
-
-        var content = new StringContent(
-            JsonSerializer.Serialize(register),
-            Encoding.UTF8, "application/json");
-
-        var response = await _client.PostAsync("/api/auth/register", content);
-        response.EnsureSuccessStatusCode();
-
-        var body = await response.Content.ReadAsStringAsync();
-        var authResponse = JsonSerializer.Deserialize<AuthResponse>(body,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-        return authResponse!.Token;
-    }
-
     [Fact]
     public async Task GetMe_WithValidToken_ShouldReturn200()
     {
-        var token = await GetTokenAsync();
-        _client.DefaultRequestHeaders.Authorization =
+        var token = await RegisterAndGetTokenAsync("profile");
+        Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
-        var response = await _client.GetAsync("/api/users/me");
+        var response = await Client.GetAsync("/api/users/me");
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 
@@ -66,16 +25,16 @@ public class UserControllerTests : IClassFixture<FirstWebApiFactory>
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
         userResponse.Should().NotBeNull();
-        userResponse!.Nome.Should().Be("Profile Test");
+        userResponse!.Nome.Should().Be("profile Test");
         userResponse.Email.Should().Contain("@email.com");
     }
 
     [Fact]
     public async Task GetMe_WithoutToken_ShouldReturn401()
     {
-        _client.DefaultRequestHeaders.Authorization = null;
+        Client.DefaultRequestHeaders.Authorization = null;
 
-        var response = await _client.GetAsync("/api/users/me");
+        var response = await Client.GetAsync("/api/users/me");
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
     }
@@ -83,10 +42,10 @@ public class UserControllerTests : IClassFixture<FirstWebApiFactory>
     [Fact]
     public async Task GetMe_WithInvalidToken_ShouldReturn401()
     {
-        _client.DefaultRequestHeaders.Authorization =
+        Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", "token-falso-invalido");
 
-        var response = await _client.GetAsync("/api/users/me");
+        var response = await Client.GetAsync("/api/users/me");
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
     }
@@ -110,12 +69,12 @@ public class UserControllerTests : IClassFixture<FirstWebApiFactory>
             JsonSerializer.Serialize(register),
             Encoding.UTF8, "application/json");
 
-        var registerResponse = await _client.PostAsync("/api/auth/register", registerContent);
+        var registerResponse = await Client.PostAsync("/api/auth/register", registerContent);
         var registerBody = await registerResponse.Content.ReadAsStringAsync();
         var authResponse = JsonSerializer.Deserialize<AuthResponse>(registerBody,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        _client.DefaultRequestHeaders.Authorization =
+        Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", authResponse!.Token);
 
         var fullRequest = new FullProfileRequest
@@ -127,7 +86,7 @@ public class UserControllerTests : IClassFixture<FirstWebApiFactory>
             JsonSerializer.Serialize(fullRequest),
             Encoding.UTF8, "application/json");
 
-        var response = await _client.PostAsync("/api/users/me/full", fullContent);
+        var response = await Client.PostAsync("/api/users/me/full", fullContent);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 
@@ -142,7 +101,7 @@ public class UserControllerTests : IClassFixture<FirstWebApiFactory>
     }
 
     [Fact]
-    public async Task GetFullProfile_WithWrongPassword_ShouldReturn403()
+    public async Task GetFullProfile_WithWrongPassword_ShouldReturn400()
     {
         var email = $"fullwrong_{Guid.NewGuid()}@email.com";
 
@@ -159,12 +118,12 @@ public class UserControllerTests : IClassFixture<FirstWebApiFactory>
             JsonSerializer.Serialize(register),
             Encoding.UTF8, "application/json");
 
-        var registerResponse = await _client.PostAsync("/api/auth/register", registerContent);
+        var registerResponse = await Client.PostAsync("/api/auth/register", registerContent);
         var registerBody = await registerResponse.Content.ReadAsStringAsync();
         var authResponse = JsonSerializer.Deserialize<AuthResponse>(registerBody,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        _client.DefaultRequestHeaders.Authorization =
+        Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", authResponse!.Token);
 
         var fullRequest = new FullProfileRequest
@@ -176,8 +135,8 @@ public class UserControllerTests : IClassFixture<FirstWebApiFactory>
             JsonSerializer.Serialize(fullRequest),
             Encoding.UTF8, "application/json");
 
-        var response = await _client.PostAsync("/api/users/me/full", fullContent);
+        var response = await Client.PostAsync("/api/users/me/full", fullContent);
 
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.Forbidden);
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
     }
 }

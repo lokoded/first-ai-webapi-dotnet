@@ -1,6 +1,7 @@
-using System.Security.Claims;
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.Interfaces;
+using FirstWebApi.WebApi.Extensions;
+using FirstWebApi.WebApi.Helpers;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -20,16 +21,15 @@ public class UsersController(
     [HttpGet("me")]
     public async Task<IActionResult> GetProfile()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-            ?? User.FindFirst("sub")?.Value;
-
-        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        var userId = User.GetUserId();
+        if (userId == Guid.Empty)
             return Problem(
                 detail: "Token inválido.",
                 statusCode: StatusCodes.Status401Unauthorized,
                 title: "Não autorizado");
 
         var profile = await profileService.GetProfileAsync(userId);
+        MaskingHelper.ApplyMask(profile);
         return Ok(profile);
     }
 
@@ -41,26 +41,14 @@ public class UsersController(
         if (!validation.IsValid)
             return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-            ?? User.FindFirst("sub")?.Value;
-
-        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        var userId = User.GetUserId();
+        if (userId == Guid.Empty)
             return Problem(
                 detail: "Token inválido.",
                 statusCode: StatusCodes.Status401Unauthorized,
                 title: "Não autorizado");
 
-        try
-        {
-            var profile = await profileService.GetFullProfileAsync(userId, request.Senha);
-            return Ok(profile);
-        }
-        catch (UnauthorizedAccessException ex)
-        {
-            return Problem(
-                detail: ex.Message,
-                statusCode: StatusCodes.Status403Forbidden,
-                title: "Reautenticação necessária");
-        }
+        var profile = await profileService.GetFullProfileAsync(userId, request.Senha);
+        return Ok(profile);
     }
 }

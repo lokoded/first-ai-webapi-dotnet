@@ -10,14 +10,16 @@ using Moq;
 
 namespace FirstWebApi.UnitTests.Infrastructure;
 
-public class KmsEncryptionServiceTests
+public class KmsEncryptionServiceTests : IDisposable
 {
     private readonly Mock<IAmazonKeyManagementService> _kmsMock;
+    private readonly MemoryCache _cache;
     private readonly KmsEncryptionService _service;
 
     public KmsEncryptionServiceTests()
     {
         _kmsMock = new Mock<IAmazonKeyManagementService>();
+        _cache = new MemoryCache(new MemoryCacheOptions());
 
         var configData = new Dictionary<string, string?>
         {
@@ -34,13 +36,15 @@ public class KmsEncryptionServiceTests
             .Build();
 
         var loggerMock = new Mock<ILogger<KmsEncryptionService>>();
-        var cacheMock = new Mock<IMemoryCache>();
 
         _service = new KmsEncryptionService(
             configuration,
             loggerMock.Object,
-            cacheMock.Object);
+            _cache,
+            _kmsMock.Object);
     }
+
+    public void Dispose() => _cache.Dispose();
 
     [Fact]
     public async Task EncryptAsync_ShouldReturnEncryptedData()

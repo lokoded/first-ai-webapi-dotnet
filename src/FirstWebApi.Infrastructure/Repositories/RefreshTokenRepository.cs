@@ -34,8 +34,9 @@ public class RefreshTokenRepository(AppDbContext context) : IRefreshTokenReposit
         await context.RefreshTokens.AddAsync(refreshToken);
     }
 
-    public void Update(RefreshToken refreshToken)
+    public Task UpdateAsync(RefreshToken refreshToken)
     {
         context.RefreshTokens.Update(refreshToken);
+        return Task.CompletedTask;
     }
 }

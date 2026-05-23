@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FirstWebApi.Application.DTOs;
 using FirstWebApi.Application.DTOs.Response;
+using FirstWebApi.Application.Exceptions;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Domain.Entities;
 using FirstWebApi.Domain.Interfaces;
@@ -26,27 +27,19 @@ public class ProfileService(
         var roles = await userManager.GetRolesAsync(user);
         var (cpf, rg, endereco) = await DecryptUserDataAsync(user, userId);
 
-        var response = new UserResponse
+        return new UserResponse
         {
             Id = user.Id,
             Nome = user.Nome,
             UserName = user.UserName!,
             Email = user.Email!,
+            Cpf = cpf,
+            Rg = rg,
+            Endereco = endereco,
             Role = roles.FirstOrDefault() ?? "User",
             CreatedAt = user.CreatedAt,
-            HasFullData = false
+            HasFullData = true
         };
-
-        if (cpf != null)
-            response.Cpf = MaskCpf(cpf);
-
-        if (rg != null)
-            response.Rg = MaskRg(rg);
-
-        if (endereco != null)
-            response.Endereco = MaskEndereco(endereco);
-
-        return response;
     }
 
     public async Task<UserResponse> GetFullProfileAsync(Guid userId, string senha)
@@ -57,7 +50,7 @@ public class ProfileService(
 
         var passwordValid = await userManager.CheckPasswordAsync(user, senha);
         if (!passwordValid)
-            throw new UnauthorizedAccessException("Senha inválida. Reautenticação necessária.");
+            throw new BadRequestException("Senha inválida. Reautenticação necessária.");
 
         var roles = await userManager.GetRolesAsync(user);
         var (cpf, rg, endereco) = await DecryptUserDataAsync(user, userId);
@@ -117,25 +110,4 @@ public class ProfileService(
         }
     }
 
-    private static string MaskCpf(string cpf)
-    {
-        if (string.IsNullOrEmpty(cpf) || cpf.Length < 11)
-            return cpf;
-
-        return $"***.{cpf[3..6]}.{cpf[6..9]}-**";
-    }
-
-    private static string MaskRg(string rg)
-    {
-        if (string.IsNullOrEmpty(rg) || rg.Length < 4)
-            return rg;
-
-        return $"*****-{rg[^4..]}";
-    }
-
-    private static EnderecoInfo MaskEndereco(EnderecoInfo endereco) => new()
-    {
-        Cidade = endereco.Cidade,
-        Estado = endereco.Estado
-    };
 }

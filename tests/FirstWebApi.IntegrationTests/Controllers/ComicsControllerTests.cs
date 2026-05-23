@@ -5,53 +5,16 @@ using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
 using FirstWebApi.Domain.Entities;
 using FirstWebApi.Infrastructure.Data;
-using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using FluentAssertions;
 
 namespace FirstWebApi.IntegrationTests.Controllers;
 
-[Collection("Database")]
-public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
+public class ComicsControllerTests(FirstWebApiFactory factory) : IntegrationTestBase(factory)
 {
-    private readonly HttpClient _client;
-    private readonly FirstWebApiFactory _factory;
-
-    public ComicsControllerTests(FirstWebApiFactory factory)
-    {
-        _factory = factory;
-        _client = _factory.CreateClient();
-    }
-
-    private async Task<string> RegisterAndGetTokenAsync()
-    {
-        var email = $"comics_{Guid.NewGuid()}@email.com";
-        var register = new RegisterRequest
-        {
-            Nome = "Comics Test",
-            UserName = $"comics_{Guid.NewGuid():N}"[..20],
-            Email = email,
-            Senha = "SenhaForte123",
-            Cpf = "529.982.247-25"
-        };
-
-        var content = new StringContent(
-            JsonSerializer.Serialize(register),
-            Encoding.UTF8, "application/json");
-
-        var response = await _client.PostAsync("/api/auth/register", content);
-        response.EnsureSuccessStatusCode();
-
-        var body = await response.Content.ReadAsStringAsync();
-        var authResponse = JsonSerializer.Deserialize<AuthResponse>(body,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-        return authResponse!.Token;
-    }
-
     private Guid SeedComicType()
     {
-        using var scope = _factory.Services.CreateScope();
+        using var scope = Factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var nome = $"HQ_{Guid.NewGuid():N}"[..20];
         var comicType = new ComicType(nome);
@@ -63,8 +26,8 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     [Fact]
     public async Task PostComic_WithValidData_ShouldReturn201()
     {
-        var token = await RegisterAndGetTokenAsync();
-        _client.DefaultRequestHeaders.Authorization =
+        var token = await RegisterAndGetTokenAsync("comics");
+        Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
         var comicTypeId = SeedComicType();
@@ -80,7 +43,7 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
             JsonSerializer.Serialize(request),
             Encoding.UTF8, "application/json");
 
-        var response = await _client.PostAsync("/api/comics", content);
+        var response = await Client.PostAsync("/api/comics", content);
         var body = await response.Content.ReadAsStringAsync();
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.Created, body);
@@ -94,9 +57,9 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     [Fact]
     public async Task GetComics_WithoutToken_ShouldReturn401()
     {
-        _client.DefaultRequestHeaders.Authorization = null;
+        Client.DefaultRequestHeaders.Authorization = null;
 
-        var response = await _client.GetAsync("/api/comics");
+        var response = await Client.GetAsync("/api/comics");
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
     }
@@ -104,8 +67,8 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     [Fact]
     public async Task PostComic_WithEmptyTitle_ShouldReturn400()
     {
-        var token = await RegisterAndGetTokenAsync();
-        _client.DefaultRequestHeaders.Authorization =
+        var token = await RegisterAndGetTokenAsync("comics");
+        Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
         var request = new ComicRequest
@@ -119,7 +82,7 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
             JsonSerializer.Serialize(request),
             Encoding.UTF8, "application/json");
 
-        var response = await _client.PostAsync("/api/comics", content);
+        var response = await Client.PostAsync("/api/comics", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
     }
@@ -127,8 +90,8 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     [Fact]
     public async Task PostComic_WithInvalidWebUrl_ShouldReturn400()
     {
-        var token = await RegisterAndGetTokenAsync();
-        _client.DefaultRequestHeaders.Authorization =
+        var token = await RegisterAndGetTokenAsync("comics");
+        Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
         var request = new ComicRequest
@@ -142,7 +105,7 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
             JsonSerializer.Serialize(request),
             Encoding.UTF8, "application/json");
 
-        var response = await _client.PostAsync("/api/comics", content);
+        var response = await Client.PostAsync("/api/comics", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
     }
@@ -150,8 +113,8 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     [Fact]
     public async Task PostComic_WithInvalidComicTypeId_ShouldReturn404()
     {
-        var token = await RegisterAndGetTokenAsync();
-        _client.DefaultRequestHeaders.Authorization =
+        var token = await RegisterAndGetTokenAsync("comics");
+        Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
         var request = new ComicRequest
@@ -165,7 +128,7 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
             JsonSerializer.Serialize(request),
             Encoding.UTF8, "application/json");
 
-        var response = await _client.PostAsync("/api/comics", content);
+        var response = await Client.PostAsync("/api/comics", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
     }
@@ -173,11 +136,11 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     [Fact]
     public async Task GetComicById_WithNonExistentId_ShouldReturn404()
     {
-        var token = await RegisterAndGetTokenAsync();
-        _client.DefaultRequestHeaders.Authorization =
+        var token = await RegisterAndGetTokenAsync("comics");
+        Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
-        var response = await _client.GetAsync($"/api/comics/{Guid.NewGuid()}");
+        var response = await Client.GetAsync($"/api/comics/{Guid.NewGuid()}");
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
     }
@@ -185,8 +148,8 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     [Fact]
     public async Task UpdateComic_WithNonExistentId_ShouldReturn404()
     {
-        var token = await RegisterAndGetTokenAsync();
-        _client.DefaultRequestHeaders.Authorization =
+        var token = await RegisterAndGetTokenAsync("comics");
+        Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
         var request = new ComicRequest
@@ -200,7 +163,7 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
             JsonSerializer.Serialize(request),
             Encoding.UTF8, "application/json");
 
-        var response = await _client.PutAsync($"/api/comics/{Guid.NewGuid()}", content);
+        var response = await Client.PutAsync($"/api/comics/{Guid.NewGuid()}", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NotFound);
     }
@@ -208,11 +171,11 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     [Fact]
     public async Task GetComics_WithValidToken_ShouldReturn200()
     {
-        var token = await RegisterAndGetTokenAsync();
-        _client.DefaultRequestHeaders.Authorization =
+        var token = await RegisterAndGetTokenAsync("comics");
+        Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
-        var response = await _client.GetAsync("/api/comics?page=1&pageSize=10");
+        var response = await Client.GetAsync("/api/comics?page=1&pageSize=10");
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
     }
@@ -220,8 +183,8 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     [Fact]
     public async Task GetComicById_WithExistingId_ShouldReturn200()
     {
-        var token = await RegisterAndGetTokenAsync();
-        _client.DefaultRequestHeaders.Authorization =
+        var token = await RegisterAndGetTokenAsync("comics");
+        Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
         var comicTypeId = SeedComicType();
@@ -236,12 +199,12 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
             JsonSerializer.Serialize(createRequest),
             Encoding.UTF8, "application/json");
 
-        var createResponse = await _client.PostAsync("/api/comics", createContent);
+        var createResponse = await Client.PostAsync("/api/comics", createContent);
         var createBody = await createResponse.Content.ReadAsStringAsync();
         var created = JsonSerializer.Deserialize<ComicResponse>(createBody,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        var response = await _client.GetAsync($"/api/comics/{created!.Id}");
+        var response = await Client.GetAsync($"/api/comics/{created!.Id}");
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 
@@ -254,8 +217,8 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     [Fact]
     public async Task UpdateComic_WithValidData_ShouldReturn204()
     {
-        var token = await RegisterAndGetTokenAsync();
-        _client.DefaultRequestHeaders.Authorization =
+        var token = await RegisterAndGetTokenAsync("comics");
+        Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
         var comicTypeId = SeedComicType();
@@ -270,7 +233,7 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
             JsonSerializer.Serialize(createRequest),
             Encoding.UTF8, "application/json");
 
-        var createResponse = await _client.PostAsync("/api/comics", createContent);
+        var createResponse = await Client.PostAsync("/api/comics", createContent);
         var createBody = await createResponse.Content.ReadAsStringAsync();
         var created = JsonSerializer.Deserialize<ComicResponse>(createBody,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
@@ -286,7 +249,7 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
             JsonSerializer.Serialize(updateRequest),
             Encoding.UTF8, "application/json");
 
-        var response = await _client.PutAsync($"/api/comics/{created!.Id}", updateContent);
+        var response = await Client.PutAsync($"/api/comics/{created!.Id}", updateContent);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
     }
@@ -294,8 +257,8 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
     [Fact]
     public async Task DeleteComic_WithExistingId_ShouldReturn204()
     {
-        var token = await RegisterAndGetTokenAsync();
-        _client.DefaultRequestHeaders.Authorization =
+        var token = await RegisterAndGetTokenAsync("comics");
+        Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
         var comicTypeId = SeedComicType();
@@ -310,12 +273,12 @@ public class ComicsControllerTests : IClassFixture<FirstWebApiFactory>
             JsonSerializer.Serialize(createRequest),
             Encoding.UTF8, "application/json");
 
-        var createResponse = await _client.PostAsync("/api/comics", createContent);
+        var createResponse = await Client.PostAsync("/api/comics", createContent);
         var createBody = await createResponse.Content.ReadAsStringAsync();
         var created = JsonSerializer.Deserialize<ComicResponse>(createBody,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
 
-        var response = await _client.DeleteAsync($"/api/comics/{created!.Id}");
+        var response = await Client.DeleteAsync($"/api/comics/{created!.Id}");
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
     }

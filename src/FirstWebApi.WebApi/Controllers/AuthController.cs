@@ -1,6 +1,6 @@
-using System.Security.Claims;
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.Interfaces;
+using FirstWebApi.WebApi.Extensions;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -55,10 +55,8 @@ public class AuthController(
     [Authorize]
     public async Task<IActionResult> Revoke()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-            ?? User.FindFirst("sub")?.Value;
-
-        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        var userId = User.GetUserId();
+        if (userId == Guid.Empty)
             return Problem(detail: "Token inválido.", statusCode: 401, title: "Não autorizado");
 
         await authService.RevokeRefreshTokensAsync(userId);

@@ -7,7 +7,6 @@ using FirstWebApi.Domain.Entities;
 using FirstWebApi.Domain.Interfaces;
 using FirstWebApi.Infrastructure.Data;
 using FirstWebApi.Infrastructure.Repositories;
-using FirstWebApi.Infrastructure.Repositories.Decorators;
 using FirstWebApi.Infrastructure.Services;
 using FirstWebApi.WebApi.Logging;
 using FirstWebApi.WebApi;
@@ -19,7 +18,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using FluentValidation;
-using StackExchange.Redis;
 using System.Threading.RateLimiting;
 
 DotNetEnv.Env.Load();
@@ -98,25 +96,13 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = builder.Configuration.GetConnectionString("Redis");
-});
-
 builder.Services.AddMemoryCache();
-
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-{
-    return ConnectionMultiplexer.Connect(builder.Configuration.GetConnectionString("Redis")!);
-});
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAddressRepository, AddressRepository>();
 builder.Services.AddScoped<IComicRepository, ComicRepository>();
 builder.Services.AddScoped<IComicTypeRepository, ComicTypeRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-builder.Services.Decorate<IComicRepository, CachedComicRepository>();
-builder.Services.Decorate<IComicTypeRepository, CachedComicTypeRepository>();
 
 builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
 builder.Services.AddScoped<IAuthService, AuthService>();

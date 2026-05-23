@@ -38,12 +38,6 @@ public class ComicRepository(AppDbContext context) : IComicRepository
         await context.Comics.AddAsync(comic);
     }
 
-    public Task UpdateAsync(Comic comic)
-    {
-        context.Comics.Update(comic);
-        return Task.CompletedTask;
-    }
-
     public Task DeleteAsync(Comic comic)
     {
         context.Comics.Remove(comic);

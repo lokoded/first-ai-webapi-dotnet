@@ -1,5 +1,6 @@
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
+using FirstWebApi.Application.Exceptions;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Application.Services;
 using FirstWebApi.Domain.Entities;
@@ -101,7 +102,7 @@ public class AuthServiceTests
         };
 
         Func<Task> act = () => _authService.RegisterAsync(request);
-        await act.Should().ThrowAsync<InvalidOperationException>()
+        await act.Should().ThrowAsync<ConflictException>()
             .WithMessage("Email já cadastrado.");
     }
 
@@ -245,8 +246,8 @@ public class AuthServiceTests
 
         token1.IsRevoked.Should().BeTrue();
         token2.IsRevoked.Should().BeTrue();
-        _refreshTokenRepoMock.Verify(r => r.Update(token1), Times.Once);
-        _refreshTokenRepoMock.Verify(r => r.Update(token2), Times.Once);
+        _refreshTokenRepoMock.Verify(r => r.UpdateAsync(token1), Times.Once);
+        _refreshTokenRepoMock.Verify(r => r.UpdateAsync(token2), Times.Once);
         _unitOfWorkMock.Verify(u => u.SaveChangesAsync(default), Times.Once);
     }
 

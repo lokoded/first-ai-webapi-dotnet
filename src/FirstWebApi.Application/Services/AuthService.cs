@@ -1,6 +1,7 @@
 using System.Text.Json;
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
+using FirstWebApi.Application.Exceptions;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Domain.Entities;
 using FirstWebApi.Domain.Interfaces;
@@ -29,20 +30,20 @@ public class AuthService(
     {
         var existingEmail = await userRepository.GetByEmailAsync(request.Email);
         if (existingEmail != null)
-            throw new InvalidOperationException("Email já cadastrado.");
+            throw new ConflictException("Email já cadastrado.");
 
         var existingUserName = await userManager.FindByNameAsync(request.UserName);
         if (existingUserName != null)
-            throw new InvalidOperationException("UserName já cadastrado.");
+            throw new ConflictException("UserName já cadastrado.");
 
-        var user = new User(request.Nome, request.UserName, request.Email);
+        var email = new Email(request.Email);
+        var user = new User(request.Nome, request.UserName, email.Endereco);
 
         var result = await userManager.CreateAsync(user, request.Senha);
         if (!result.Succeeded)
         {
-            var errors = string.Join(", ", result.Errors.Select(e => e.Description));
-            logger.LogWarning("Falha ao registrar usuário: {Errors}", errors);
-            throw new InvalidOperationException($"Falha ao criar usuário: {errors}");
+            logger.LogWarning("Falha ao registrar usuário: {Errors}", string.Join(", ", result.Errors.Select(e => e.Description)));
+            throw new BadRequestException("Falha ao criar usuário.");
         }
 
         await userManager.AddToRoleAsync(user, "User");
@@ -69,17 +70,12 @@ public class AuthService(
             await addressRepository.AddAsync(address);
         }
 
-        var (refreshToken, tokenHash) = tokenService.GenerateRefreshToken();
-        var refreshTokenEntity = new RefreshToken(user.Id, tokenHash, DateTime.UtcNow + RefreshTokenExpiry);
-        await refreshTokenRepository.AddAsync(refreshTokenEntity);
-
+        var refreshToken = await CreateRefreshTokenAsync(user.Id);
         await unitOfWork.SaveChangesAsync();
 
-        var roles = (await userManager.GetRolesAsync(user)).ToList();
-        var token = tokenService.GenerateToken(user.Id, user.Email!, user.Nome, roles);
+        var (token, roles) = await GenerateTokenWithRolesAsync(user);
 
         logger.LogInformation("Usuário {UserId} registrado com sucesso", user.Id);
-
         return BuildAuthResponse(token, refreshToken, user, roles);
     }
 
@@ -105,16 +101,12 @@ public class AuthService(
 
         await userManager.ResetAccessFailedCountAsync(user);
 
-        var (refreshToken, tokenHash) = tokenService.GenerateRefreshToken();
-        var refreshTokenEntity = new RefreshToken(user.Id, tokenHash, DateTime.UtcNow + RefreshTokenExpiry);
-        await refreshTokenRepository.AddAsync(refreshTokenEntity);
+        var refreshToken = await CreateRefreshTokenAsync(user.Id);
         await unitOfWork.SaveChangesAsync();
 
-        var roles = (await userManager.GetRolesAsync(user)).ToList();
-        var token = tokenService.GenerateToken(user.Id, user.Email!, user.Nome, roles);
+        var (token, roles) = await GenerateTokenWithRolesAsync(user);
 
         logger.LogInformation("Usuário {UserId} fez login", user.Id);
-
         return BuildAuthResponse(token, refreshToken, user, roles);
     }
 
@@ -137,19 +129,16 @@ public class AuthService(
             throw new UnauthorizedAccessException(InvalidRefreshToken);
 
         storedToken.Revoke();
-        refreshTokenRepository.Update(storedToken);
+        await refreshTokenRepository.UpdateAsync(storedToken);
 
         var user = await userRepository.GetByIdAsync(storedToken.UserId);
         if (user is null)
             throw new UnauthorizedAccessException(UserNotFound);
 
-        var (newRefreshToken, newTokenHash) = tokenService.GenerateRefreshToken();
-        var newRefreshTokenEntity = new RefreshToken(user.Id, newTokenHash, DateTime.UtcNow + RefreshTokenExpiry);
-        await refreshTokenRepository.AddAsync(newRefreshTokenEntity);
+        var newRefreshToken = await CreateRefreshTokenAsync(user.Id);
         await unitOfWork.SaveChangesAsync();
 
-        var roles = (await userManager.GetRolesAsync(user)).ToList();
-        var token = tokenService.GenerateToken(user.Id, user.Email!, user.Nome, roles);
+        var (token, roles) = await GenerateTokenWithRolesAsync(user);
 
         return BuildAuthResponse(token, newRefreshToken, user, roles);
     }
@@ -160,9 +149,23 @@ public class AuthService(
         foreach (var token in activeTokens)
         {
             token.Revoke();
-            refreshTokenRepository.Update(token);
+            await refreshTokenRepository.UpdateAsync(token);
         }
         await unitOfWork.SaveChangesAsync();
+    }
+
+    private async Task<string> CreateRefreshTokenAsync(Guid userId)
+    {
+        var (refreshToken, tokenHash) = tokenService.GenerateRefreshToken();
+        await refreshTokenRepository.AddAsync(new RefreshToken(userId, tokenHash, DateTime.UtcNow + RefreshTokenExpiry));
+        return refreshToken;
+    }
+
+    private async Task<(string Token, IList<string> Roles)> GenerateTokenWithRolesAsync(User user)
+    {
+        var roles = (await userManager.GetRolesAsync(user)).ToList();
+        var token = tokenService.GenerateToken(user.Id, user.Email!, user.Nome, roles);
+        return (token, roles);
     }
 
     private static AuthResponse BuildAuthResponse(string token, string refreshToken, User user, IList<string> roles) => new()

@@ -43,7 +43,7 @@ tests/
 - Value Objects são `readonly struct` com validação própria (ex: `Cpf`, `Email`)
 - Entidades: `User` extends `IdentityUser<Guid>`, `Comic`, `ComicType`, `Address`
 - Repository interfaces apenas (implementação na Infrastructure)
-- `IUnitOfWork` com `Task<int> CommitAsync()`
+- `IUnitOfWork` com `Task<int> SaveChangesAsync()`
 
 ## Application
 

@@ -17,6 +17,7 @@ public class AdminComicTypesController(
     IComicTypeService comicTypeService,
     IValidator<ComicTypeRequest> validator) : ControllerBase
 {
+    private const string AdminComicTypesBase = "/api/admin/comic-types";
 
     [HttpPost]
     [ProducesResponseType(typeof(ComicTypeResponse), StatusCodes.Status201Created)]
@@ -31,7 +32,7 @@ public class AdminComicTypesController(
             return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
         var result = await comicTypeService.CreateAsync(request.Nome);
-        return Created($"/api/admin/comic-types/{result.Id}", result);
+        return Created($"{AdminComicTypesBase}/{result.Id}", result);
     }
 
     [HttpDelete("{id:guid}")]
