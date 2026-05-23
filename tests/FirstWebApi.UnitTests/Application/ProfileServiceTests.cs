@@ -35,11 +35,11 @@ public class ProfileServiceTests
         var userId = Guid.NewGuid();
         var user = new User("João", "joao_123", "joao@email.com");
 
-        _userRepoMock.Setup(r => r.GetByIdAsync(userId))
+        _userRepoMock.Setup(r => r.GetByIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
         _userManagerMock.Setup(m => m.GetRolesAsync(user))
             .ReturnsAsync(["User"]);
-        _sensitiveDataMock.Setup(m => m.DecryptUserDataAsync(user, userId))
+        _sensitiveDataMock.Setup(m => m.DecryptUserDataAsync(user, userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(((string?)null, (string?)null, (EnderecoInfo?)null));
 
         var result = await _profileService.GetProfileAsync(userId);
@@ -52,7 +52,7 @@ public class ProfileServiceTests
     [Fact]
     public async Task GetProfileAsync_WithNonExistentUser_ShouldThrowException()
     {
-        _userRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
+        _userRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
         Func<Task> act = () => _profileService.GetProfileAsync(Guid.NewGuid());

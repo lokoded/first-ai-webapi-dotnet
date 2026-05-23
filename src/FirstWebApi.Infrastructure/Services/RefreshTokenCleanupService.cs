@@ -18,7 +18,7 @@ public class RefreshTokenCleanupService(IServiceProvider serviceProvider, ILogge
             {
                 using var scope = serviceProvider.CreateScope();
                 var repo = scope.ServiceProvider.GetRequiredService<IRefreshTokenRepository>();
-                var removed = await repo.DeleteExpiredAsync(KeepDays);
+                var removed = await repo.DeleteExpiredAsync(KeepDays, stoppingToken);
                 if (removed > 0)
                     logger.LogInformation("Limpeza de refresh tokens: {Count} removidos", removed);
             }

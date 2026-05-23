@@ -8,13 +8,13 @@ namespace FirstWebApi.Infrastructure.Repositories;
 public class AddressRepository(AppDbContext context) : IAddressRepository
 {
 
-    public async Task<Address?> GetByUserIdAsync(Guid userId)
+    public async Task<Address?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        return await context.Addresses.AsNoTracking().FirstOrDefaultAsync(a => a.UserId == userId);
+        return await context.Addresses.AsNoTracking().FirstOrDefaultAsync(a => a.UserId == userId, cancellationToken);
     }
 
-    public async Task AddAsync(Address address)
+    public async Task AddAsync(Address address, CancellationToken cancellationToken = default)
     {
-        await context.Addresses.AddAsync(address);
+        await context.Addresses.AddAsync(address, cancellationToken);
     }
 }

@@ -18,7 +18,7 @@ public class ComicTypesController(IComicTypeService comicTypeService) : Controll
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetAll()
     {
-        var result = await comicTypeService.GetAllAsync();
+        var result = await comicTypeService.GetAllAsync(HttpContext.RequestAborted);
         return Ok(result);
     }
 }

@@ -9,31 +9,31 @@ namespace FirstWebApi.Application.Services;
 public class ComicTypeService(IComicTypeRepository comicTypeRepository, IUnitOfWork unitOfWork) : IComicTypeService
 {
 
-    public async Task<List<ComicTypeResponse>> GetAllAsync()
+    public async Task<List<ComicTypeResponse>> GetAllAsync(CancellationToken cancellationToken = default)
     {
-        var types = await comicTypeRepository.GetAllAsync();
+        var types = await comicTypeRepository.GetAllAsync(cancellationToken);
         return types.Select(t => new ComicTypeResponse { Id = t.Id, Nome = t.Nome }).ToList();
     }
 
-    public async Task<ComicTypeResponse> CreateAsync(string name)
+    public async Task<ComicTypeResponse> CreateAsync(string name, CancellationToken cancellationToken = default)
     {
         var comicType = new ComicType(name);
-        await comicTypeRepository.AddAsync(comicType);
-        await unitOfWork.SaveChangesAsync();
+        await comicTypeRepository.AddAsync(comicType, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
         return new ComicTypeResponse { Id = comicType.Id, Nome = comicType.Nome };
     }
 
-    public async Task<bool> DeleteAsync(Guid id)
+    public async Task<bool> DeleteAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        var comicType = await comicTypeRepository.GetByIdAsync(id);
+        var comicType = await comicTypeRepository.GetByIdAsync(id, cancellationToken);
         if (comicType == null)
             return false;
 
-        if (await comicTypeRepository.HasComicsAsync(id))
+        if (await comicTypeRepository.HasComicsAsync(id, cancellationToken))
             throw new ConflictException("Tipo possui comics vinculadas. Remova-as primeiro.");
 
-        await comicTypeRepository.DeleteAsync(comicType);
-        await unitOfWork.SaveChangesAsync();
+        await comicTypeRepository.DeleteAsync(comicType, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
         return true;
     }
 }

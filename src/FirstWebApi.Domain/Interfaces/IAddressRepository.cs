@@ -4,6 +4,6 @@ namespace FirstWebApi.Domain.Interfaces;
 
 public interface IAddressRepository
 {
-    Task<Address?> GetByUserIdAsync(Guid userId);
-    Task AddAsync(Address address);
+    Task<Address?> GetByUserIdAsync(Guid userId, CancellationToken cancellationToken = default);
+    Task AddAsync(Address address, CancellationToken cancellationToken = default);
 }

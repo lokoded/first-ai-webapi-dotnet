@@ -96,14 +96,14 @@ public class KmsEncryptionService(
         }
     }
 
-    public async Task<DadoProtegido> EncryptAsync(string plaintext)
+    public async Task<DadoProtegido> EncryptAsync(string plaintext, CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync();
         var dataKeyResponse = await _kmsClient.GenerateDataKeyAsync(new GenerateDataKeyRequest
         {
             KeyId = _keyId,
             KeySpec = DataKeySpec.AES_256
-        });
+        }, cancellationToken);
 
         var plaintextKeyBytes = dataKeyResponse.Plaintext.ToArray();
         var encryptedDataKeyBytes = dataKeyResponse.CiphertextBlob.ToArray();
@@ -129,7 +129,7 @@ public class KmsEncryptionService(
         return new DadoProtegido(Pack(encrypted));
     }
 
-    public async Task<string> DecryptAsync(DadoProtegido data)
+    public async Task<string> DecryptAsync(DadoProtegido data, CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync();
         var encrypted = Unpack(data.Valor);
@@ -142,7 +142,7 @@ public class KmsEncryptionService(
             {
                 CiphertextBlob = new MemoryStream(encrypted.EncryptedDataKey),
                 KeyId = _keyId
-            });
+            }, cancellationToken);
             plaintextKey = decryptResponse.Plaintext.ToArray();
             _cache.Set(cacheKey, plaintextKey, new MemoryCacheEntryOptions
             {

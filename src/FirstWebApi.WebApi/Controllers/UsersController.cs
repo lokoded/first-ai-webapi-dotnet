@@ -28,7 +28,7 @@ public class UsersController(
                 statusCode: StatusCodes.Status401Unauthorized,
                 title: "Não autorizado");
 
-        var profile = await profileService.GetProfileAsync(userId);
+        var profile = await profileService.GetProfileAsync(userId, HttpContext.RequestAborted);
         return Ok(profile);
     }
 
@@ -46,7 +46,7 @@ public class UsersController(
                 statusCode: StatusCodes.Status401Unauthorized,
                 title: "Não autorizado");
 
-        var profile = await profileService.GetFullProfileAsync(userId, request.Senha);
+        var profile = await profileService.GetFullProfileAsync(userId, request.Senha, HttpContext.RequestAborted);
         return Ok(profile);
     }
 }

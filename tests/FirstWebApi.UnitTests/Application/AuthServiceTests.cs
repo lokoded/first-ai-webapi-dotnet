@@ -49,7 +49,7 @@ public class AuthServiceTests
     [Fact]
     public async Task RegisterAsync_WithValidData_ShouldReturnToken()
     {
-        _userRepoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>()))
+        _userRepoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
         _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<User>(), It.IsAny<string>()))
@@ -61,7 +61,7 @@ public class AuthServiceTests
         _userManagerMock.Setup(m => m.GetRolesAsync(It.IsAny<User>()))
             .ReturnsAsync(["User"]);
 
-        _userRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
+        _userRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new User("João", "joao_123", "joao@email.com"));
 
         _tokenServiceMock.Setup(t => t.GenerateToken(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IList<string>>()))
@@ -108,7 +108,7 @@ public class AuthServiceTests
     {
         var user = new User("João", "joao_123", "joao@email.com");
 
-        _userRepoMock.Setup(r => r.GetByEmailAsync("joao@email.com"))
+        _userRepoMock.Setup(r => r.GetByEmailAsync("joao@email.com", It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
         _userManagerMock.Setup(m => m.CheckPasswordAsync(user, "SenhaForte123"))
@@ -137,7 +137,7 @@ public class AuthServiceTests
     {
         var user = new User("João", "joao_123", "joao@email.com");
 
-        _userRepoMock.Setup(r => r.GetByEmailAsync("joao@email.com"))
+        _userRepoMock.Setup(r => r.GetByEmailAsync("joao@email.com", It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
         _userManagerMock.Setup(m => m.CheckPasswordAsync(user, It.IsAny<string>()))
@@ -162,9 +162,9 @@ public class AuthServiceTests
 
         _tokenServiceMock.Setup(t => t.HashToken(It.IsAny<string>()))
             .Returns("token-hash");
-        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash"))
+        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash", It.IsAny<CancellationToken>()))
             .ReturnsAsync(storedToken);
-        _userRepoMock.Setup(r => r.GetByIdAsync(user.Id))
+        _userRepoMock.Setup(r => r.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
         _tokenServiceMock.Setup(t => t.GenerateRefreshToken())
             .Returns(("new-refresh-token", "new-hash"));
@@ -172,7 +172,7 @@ public class AuthServiceTests
             .Returns("fake-jwt-token");
         _userManagerMock.Setup(m => m.GetRolesAsync(It.IsAny<User>()))
             .ReturnsAsync(["User"]);
-        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(1);
+        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         var result = await _authService.RefreshTokenAsync("valid-refresh-token");
 
@@ -186,7 +186,7 @@ public class AuthServiceTests
     {
         _tokenServiceMock.Setup(t => t.HashToken(It.IsAny<string>()))
             .Returns("invalid-hash");
-        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("invalid-hash"))
+        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("invalid-hash", It.IsAny<CancellationToken>()))
             .ReturnsAsync((RefreshToken?)null);
 
         Func<Task> act = () => _authService.RefreshTokenAsync("invalid-token");
@@ -201,7 +201,7 @@ public class AuthServiceTests
 
         _tokenServiceMock.Setup(t => t.HashToken(It.IsAny<string>()))
             .Returns("token-hash");
-        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash"))
+        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash", It.IsAny<CancellationToken>()))
             .ReturnsAsync(storedToken);
 
         Func<Task> act = () => _authService.RefreshTokenAsync("expired-token");
@@ -217,11 +217,11 @@ public class AuthServiceTests
 
         _tokenServiceMock.Setup(t => t.HashToken(It.IsAny<string>()))
             .Returns("token-hash");
-        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash"))
+        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash", It.IsAny<CancellationToken>()))
             .ReturnsAsync(storedToken);
-        _refreshTokenRepoMock.Setup(r => r.GetActiveByUserIdAsync(It.IsAny<Guid>()))
+        _refreshTokenRepoMock.Setup(r => r.GetActiveByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
-        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(1);
+        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         Func<Task> act = () => _authService.RefreshTokenAsync("revoked-token");
         await act.Should().ThrowAsync<UnauthorizedException>()
@@ -235,7 +235,7 @@ public class AuthServiceTests
         var token1 = new RefreshToken(userId, "hash1", DateTime.UtcNow.AddDays(7));
         var token2 = new RefreshToken(userId, "hash2", DateTime.UtcNow.AddDays(7));
 
-        _refreshTokenRepoMock.Setup(r => r.GetActiveByUserIdAsync(userId))
+        _refreshTokenRepoMock.Setup(r => r.GetActiveByUserIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync([token1, token2]);
         _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(2);
 
@@ -243,9 +243,9 @@ public class AuthServiceTests
 
         token1.IsRevoked.Should().BeTrue();
         token2.IsRevoked.Should().BeTrue();
-        _refreshTokenRepoMock.Verify(r => r.UpdateAsync(token1), Times.Once);
-        _refreshTokenRepoMock.Verify(r => r.UpdateAsync(token2), Times.Once);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(default), Times.Once);
+        _refreshTokenRepoMock.Verify(r => r.UpdateAsync(token1, It.IsAny<CancellationToken>()), Times.Once);
+        _refreshTokenRepoMock.Verify(r => r.UpdateAsync(token2, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
 }

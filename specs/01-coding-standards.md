@@ -21,7 +21,16 @@
 
 ## Boas Práticas
 
-- Async/await para toda I/O. Nunca `.Result` ou `.Wait()`. `CancellationToken` como último parâmetro.
+## CancellationToken
+
+- `CancellationToken` como **último parâmetro** em todo método async público (interfaces Domain, Application, Infrastructure)
+- **Nome completo** `cancellationToken` — nunca `ct`
+- **Default `= default`** em interfaces (backward compatibility)
+- Private/static methods **sem** `= default` — caller sempre fornece
+- **Controllers**: propagar `HttpContext.RequestAborted`
+- **EF Core**: passar `cancellationToken` para `ToListAsync`, `FirstOrDefaultAsync`, `SaveChangesAsync`, etc.
+- **Moq**: usar `It.IsAny<CancellationToken>()` em Setup/Verify — nunca `default`
+- **`UserManager<T>`**: NÃO recebe `CancellationToken` (Identity não suporta) — exceção documentada
 - Async desde o início — `ValueTask` só com justificativa de performance
 - Imutabilidade em ValueObjects (`readonly record struct`)
 - Propriedades init-only em DTOs de request quando possível

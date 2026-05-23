@@ -22,7 +22,7 @@ public class AdminComicTypesController(
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Create([FromBody] ComicTypeRequest request)
     {
-        var result = await comicTypeService.CreateAsync(request.Nome);
+        var result = await comicTypeService.CreateAsync(request.Nome, HttpContext.RequestAborted);
         return CreatedAtAction(null, new { id = result.Id }, result);
     }
 
@@ -34,7 +34,7 @@ public class AdminComicTypesController(
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Delete(Guid id)
     {
-        var success = await comicTypeService.DeleteAsync(id);
+        var success = await comicTypeService.DeleteAsync(id, HttpContext.RequestAborted);
         if (!success)
             return Problem(detail: "Tipo de comic não encontrado.", statusCode: StatusCodes.Status404NotFound, title: "Não encontrado");
 

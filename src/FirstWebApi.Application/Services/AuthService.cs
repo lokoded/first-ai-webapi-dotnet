@@ -1,3 +1,4 @@
+using System.Threading;
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
 using FirstWebApi.Application.Exceptions;
@@ -25,12 +26,12 @@ public class AuthService(
     private const string InvalidRefreshToken = "Refresh token inválido ou expirado.";
     private const string UserNotFound = "Usuário não encontrado.";
 
-    public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
+    public async Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(request.Cpf) && string.IsNullOrWhiteSpace(request.Rg))
             throw new BadRequestException("CPF ou RG deve ser informado.");
 
-        var existingEmail = await userRepository.GetByEmailAsync(request.Email);
+        var existingEmail = await userRepository.GetByEmailAsync(request.Email, cancellationToken);
         if (existingEmail != null)
             throw new ConflictException("Email já cadastrado.");
 
@@ -50,12 +51,12 @@ public class AuthService(
 
         await userManager.AddToRoleAsync(user, Roles.User);
 
-        await sensitiveData.EncryptCpfAsync(user, request.Cpf);
-        await sensitiveData.EncryptRgAsync(user, request.Rg);
-        await sensitiveData.EncryptEnderecoAsync(user.Id, request.Endereco);
+        await sensitiveData.EncryptCpfAsync(user, request.Cpf, cancellationToken);
+        await sensitiveData.EncryptRgAsync(user, request.Rg, cancellationToken);
+        await sensitiveData.EncryptEnderecoAsync(user.Id, request.Endereco, cancellationToken);
 
         var refreshToken = await CreateRefreshTokenAsync(user.Id);
-        await unitOfWork.SaveChangesAsync();
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var (token, roles) = await GenerateTokenWithRolesAsync(user);
 
@@ -63,9 +64,9 @@ public class AuthService(
         return BuildAuthResponse(token, refreshToken, user, roles);
     }
 
-    public async Task<AuthResponse> LoginAsync(LoginRequest request)
+    public async Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default)
     {
-        var user = await userRepository.GetByEmailAsync(request.Email);
+        var user = await userRepository.GetByEmailAsync(request.Email, cancellationToken);
         if (user == null)
         {
             await userManager.CheckPasswordAsync(IdentityUserPlaceholder(), "fake");
@@ -86,7 +87,7 @@ public class AuthService(
         await userManager.ResetAccessFailedCountAsync(user);
 
         var refreshToken = await CreateRefreshTokenAsync(user.Id);
-        await unitOfWork.SaveChangesAsync();
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var (token, roles) = await GenerateTokenWithRolesAsync(user);
 
@@ -94,10 +95,10 @@ public class AuthService(
         return BuildAuthResponse(token, refreshToken, user, roles);
     }
 
-    public async Task<AuthResponse> RefreshTokenAsync(string refreshToken)
+    public async Task<AuthResponse> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default)
     {
         var tokenHash = tokenService.HashToken(refreshToken);
-        var storedToken = await refreshTokenRepository.GetByTokenHashAsync(tokenHash);
+        var storedToken = await refreshTokenRepository.GetByTokenHashAsync(tokenHash, cancellationToken);
 
         if (storedToken is null)
             throw new UnauthorizedException(InvalidRefreshToken);
@@ -105,7 +106,7 @@ public class AuthService(
         if (storedToken.IsRevoked)
         {
             logger.LogWarning("Possível roubo de refresh token detectado para usuário {UserId}. Revogando todos os tokens.", storedToken.UserId);
-            await RevokeRefreshTokensAsync(storedToken.UserId);
+            await RevokeRefreshTokensAsync(storedToken.UserId, cancellationToken);
             throw new UnauthorizedException(InvalidRefreshToken);
         }
 
@@ -113,29 +114,29 @@ public class AuthService(
             throw new UnauthorizedException(InvalidRefreshToken);
 
         storedToken.Revoke();
-        await refreshTokenRepository.UpdateAsync(storedToken);
+        await refreshTokenRepository.UpdateAsync(storedToken, cancellationToken);
 
-        var user = await userRepository.GetByIdAsync(storedToken.UserId);
+        var user = await userRepository.GetByIdAsync(storedToken.UserId, cancellationToken);
         if (user is null)
             throw new UnauthorizedException(UserNotFound);
 
         var newRefreshToken = await CreateRefreshTokenAsync(user.Id);
-        await unitOfWork.SaveChangesAsync();
+        await unitOfWork.SaveChangesAsync(cancellationToken);
 
         var (token, roles) = await GenerateTokenWithRolesAsync(user);
 
         return BuildAuthResponse(token, newRefreshToken, user, roles);
     }
 
-    public async Task RevokeRefreshTokensAsync(Guid userId)
+    public async Task RevokeRefreshTokensAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var activeTokens = await refreshTokenRepository.GetActiveByUserIdAsync(userId);
+        var activeTokens = await refreshTokenRepository.GetActiveByUserIdAsync(userId, cancellationToken);
         foreach (var token in activeTokens)
         {
             token.Revoke();
-            await refreshTokenRepository.UpdateAsync(token);
+            await refreshTokenRepository.UpdateAsync(token, cancellationToken);
         }
-        await unitOfWork.SaveChangesAsync();
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 
     private async Task<string> CreateRefreshTokenAsync(Guid userId)

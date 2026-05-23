@@ -27,7 +27,7 @@ public class ComicsController(
         if (userId == Guid.Empty)
             return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
-        var result = await comicService.GetAllAsync(userId, page, pageSize);
+        var result = await comicService.GetAllAsync(userId, page, pageSize, HttpContext.RequestAborted);
         return Ok(result);
     }
 
@@ -41,7 +41,7 @@ public class ComicsController(
         if (userId == Guid.Empty)
             return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
-        var result = await comicService.GetByIdAsync(id, userId);
+        var result = await comicService.GetByIdAsync(id, userId, HttpContext.RequestAborted);
         if (result is null)
             return Problem(detail: "Comic não encontrada.", statusCode: StatusCodes.Status404NotFound, title: "Não encontrado");
 
@@ -59,7 +59,7 @@ public class ComicsController(
         if (userId == Guid.Empty)
             return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
-        var result = await comicService.CreateAsync(request, userId);
+        var result = await comicService.CreateAsync(request, userId, HttpContext.RequestAborted);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
 
@@ -74,7 +74,7 @@ public class ComicsController(
         if (userId == Guid.Empty)
             return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
-        var result = await comicService.UpdateAsync(id, request, userId);
+        var result = await comicService.UpdateAsync(id, request, userId, HttpContext.RequestAborted);
         if (result is null)
             return Problem(detail: "Comic não encontrada.", statusCode: StatusCodes.Status404NotFound, title: "Não encontrado");
 
@@ -91,7 +91,7 @@ public class ComicsController(
         if (userId == Guid.Empty)
             return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
-        var success = await comicService.DeleteAsync(id, userId);
+        var success = await comicService.DeleteAsync(id, userId, HttpContext.RequestAborted);
         if (!success)
             return Problem(detail: "Comic não encontrada.", statusCode: StatusCodes.Status404NotFound, title: "Não encontrado");
 

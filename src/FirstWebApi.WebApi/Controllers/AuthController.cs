@@ -23,7 +23,7 @@ public class AuthController(
     [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        var result = await authService.RegisterAsync(request);
+        var result = await authService.RegisterAsync(request, HttpContext.RequestAborted);
         SetRefreshTokenCookie(result.RefreshToken);
         return CreatedAtAction(nameof(UsersController.GetProfile), "Users", new { }, result);
     }
@@ -34,7 +34,7 @@ public class AuthController(
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var result = await authService.LoginAsync(request);
+        var result = await authService.LoginAsync(request, HttpContext.RequestAborted);
         SetRefreshTokenCookie(result.RefreshToken);
         return Ok(result);
     }
@@ -49,7 +49,7 @@ public class AuthController(
         if (string.IsNullOrEmpty(refreshToken))
             return Problem(detail: "Refresh token não encontrado.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
-        var result = await authService.RefreshTokenAsync(refreshToken);
+        var result = await authService.RefreshTokenAsync(refreshToken, HttpContext.RequestAborted);
         SetRefreshTokenCookie(result.RefreshToken);
         return Ok(result);
     }
@@ -63,7 +63,7 @@ public class AuthController(
         if (userId == Guid.Empty)
             return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
-        await authService.RevokeRefreshTokensAsync(userId);
+        await authService.RevokeRefreshTokensAsync(userId, HttpContext.RequestAborted);
         return NoContent();
     }
 

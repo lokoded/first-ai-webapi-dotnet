@@ -15,14 +15,14 @@ public class ProfileService(
     UserManager<User> userManager) : IProfileService
 {
 
-    public async Task<UserResponse> GetProfileAsync(Guid userId)
+    public async Task<UserResponse> GetProfileAsync(Guid userId, CancellationToken cancellationToken = default)
     {
-        var user = await userRepository.GetByIdAsync(userId);
+        var user = await userRepository.GetByIdAsync(userId, cancellationToken);
         if (user == null)
             throw new KeyNotFoundException("Usuário não encontrado.");
 
         var roles = await userManager.GetRolesAsync(user);
-        var (cpf, rg, endereco) = await sensitiveData.DecryptUserDataAsync(user, userId);
+        var (cpf, rg, endereco) = await sensitiveData.DecryptUserDataAsync(user, userId, cancellationToken);
 
         var response = new UserResponse
         {
@@ -42,9 +42,9 @@ public class ProfileService(
         return response;
     }
 
-    public async Task<UserResponse> GetFullProfileAsync(Guid userId, string senha)
+    public async Task<UserResponse> GetFullProfileAsync(Guid userId, string senha, CancellationToken cancellationToken = default)
     {
-        var user = await userRepository.GetByIdAsync(userId);
+        var user = await userRepository.GetByIdAsync(userId, cancellationToken);
         if (user == null)
             throw new KeyNotFoundException("Usuário não encontrado.");
 
@@ -53,7 +53,7 @@ public class ProfileService(
             throw new BadRequestException("Senha inválida. Reautenticação necessária.");
 
         var roles = await userManager.GetRolesAsync(user);
-        var (cpf, rg, endereco) = await sensitiveData.DecryptUserDataAsync(user, userId);
+        var (cpf, rg, endereco) = await sensitiveData.DecryptUserDataAsync(user, userId, cancellationToken);
 
         return new UserResponse
         {
