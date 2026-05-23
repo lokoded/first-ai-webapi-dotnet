@@ -2,7 +2,6 @@ using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.WebApi.Extensions;
 using FirstWebApi.WebApi.Helpers;
-using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -14,8 +13,7 @@ namespace FirstWebApi.WebApi.Controllers;
 [Authorize]
 [EnableRateLimiting("Default")]
 public class UsersController(
-    IProfileService profileService,
-    IValidator<FullProfileRequest> fullProfileValidator) : ControllerBase
+    IProfileService profileService) : ControllerBase
 {
 
     [HttpGet("me")]
@@ -37,10 +35,6 @@ public class UsersController(
     [EnableRateLimiting("Strict")]
     public async Task<IActionResult> GetFullProfile([FromBody] FullProfileRequest request)
     {
-        var validation = await fullProfileValidator.ValidateAsync(request);
-        if (!validation.IsValid)
-            return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
-
         var userId = User.GetUserId();
         if (userId == Guid.Empty)
             return Problem(

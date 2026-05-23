@@ -1,7 +1,6 @@
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
 using FirstWebApi.Application.Interfaces;
-using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -13,8 +12,7 @@ namespace FirstWebApi.WebApi.Controllers;
 [Authorize(Roles = "Admin")]
 [EnableRateLimiting("Default")]
 public class AdminComicTypesController(
-    IComicTypeService comicTypeService,
-    IValidator<ComicTypeRequest> validator) : ControllerBase
+    IComicTypeService comicTypeService) : ControllerBase
 {
     [HttpPost]
     [ProducesResponseType(typeof(ComicTypeResponse), StatusCodes.Status201Created)]
@@ -24,10 +22,6 @@ public class AdminComicTypesController(
     [ProducesResponseType(StatusCodes.Status403Forbidden)]
     public async Task<IActionResult> Create([FromBody] ComicTypeRequest request)
     {
-        var validation = await validator.ValidateAsync(request);
-        if (!validation.IsValid)
-            return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
-
         var result = await comicTypeService.CreateAsync(request.Nome);
         return CreatedAtAction(null, new { id = result.Id }, result);
     }

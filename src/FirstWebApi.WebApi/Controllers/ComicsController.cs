@@ -2,7 +2,6 @@ using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.WebApi.Extensions;
-using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -14,8 +13,7 @@ namespace FirstWebApi.WebApi.Controllers;
 [Authorize]
 [EnableRateLimiting("Default")]
 public class ComicsController(
-    IComicService comicService,
-    IValidator<ComicRequest> validator) : ControllerBase
+    IComicService comicService) : ControllerBase
 {
 
     [HttpGet]
@@ -61,10 +59,6 @@ public class ComicsController(
         if (userId == Guid.Empty)
             return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
-        var validation = await validator.ValidateAsync(request);
-        if (!validation.IsValid)
-            return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
-
         var result = await comicService.CreateAsync(request, userId);
         return CreatedAtAction(nameof(GetById), new { id = result.Id }, result);
     }
@@ -79,10 +73,6 @@ public class ComicsController(
         var userId = User.GetUserId();
         if (userId == Guid.Empty)
             return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
-
-        var validation = await validator.ValidateAsync(request);
-        if (!validation.IsValid)
-            return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
         var result = await comicService.UpdateAsync(id, request, userId);
         if (result is null)
