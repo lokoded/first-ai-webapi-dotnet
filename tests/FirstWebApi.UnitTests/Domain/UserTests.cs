@@ -79,7 +79,7 @@ public class UserTests
     }
 
     [Fact]
-    public void CreateUser_ShouldHaveValidId()
+    public void CreateUser_WithValidData_ShouldHaveValidId()
     {
         var user = new User("Joao", "joao", "joao@email.com");
 

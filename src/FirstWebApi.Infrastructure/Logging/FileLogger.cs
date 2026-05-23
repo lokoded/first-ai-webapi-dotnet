@@ -55,12 +55,20 @@ public class FileLogger(string categoryName, string filePath, string format, IHt
     {
         if (!IsEnabled(logLevel)) return;
 
+        var message = formatter(state, exception);
+
+        if (SensitiveKeyTerms.Any(term =>
+                message.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0))
+        {
+            message = "***REDACTED***";
+        }
+
         var logRecord = new Dictionary<string, object?>
         {
             ["Timestamp"] = DateTime.UtcNow.ToString("O"),
             ["Level"] = logLevel.ToString(),
             ["Category"] = categoryName,
-            ["Message"] = formatter(state, exception)
+            ["Message"] = message
         };
 
         if (exception != null)

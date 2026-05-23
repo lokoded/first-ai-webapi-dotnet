@@ -2,6 +2,7 @@ using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
 using FirstWebApi.Application.Exceptions;
 using FirstWebApi.Application.Interfaces;
+using FirstWebApi.Domain;
 using FirstWebApi.Domain.Entities;
 using FirstWebApi.Domain.Interfaces;
 using FirstWebApi.Domain.ValueObjects;
@@ -47,7 +48,7 @@ public class AuthService(
             throw new BadRequestException("Falha ao criar usuário.");
         }
 
-        await userManager.AddToRoleAsync(user, "User");
+        await userManager.AddToRoleAsync(user, Roles.User);
 
         await sensitiveData.EncryptCpfAsync(user, request.Cpf);
         await sensitiveData.EncryptRgAsync(user, request.Rg);

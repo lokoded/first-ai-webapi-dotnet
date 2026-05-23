@@ -10,7 +10,7 @@ public class AddressRepository(AppDbContext context) : IAddressRepository
 
     public async Task<Address?> GetByUserIdAsync(Guid userId)
     {
-        return await context.Addresses.FirstOrDefaultAsync(a => a.UserId == userId);
+        return await context.Addresses.AsNoTracking().FirstOrDefaultAsync(a => a.UserId == userId);
     }
 
     public async Task AddAsync(Address address)

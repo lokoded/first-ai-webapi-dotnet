@@ -114,76 +114,32 @@ public class AuthControllerTests(FirstWebApiFactory factory) : IntegrationTestBa
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
     }
 
-    [Fact]
-    public async Task PostRegister_WithInvalidCpf_ShouldReturn400()
+    public static IEnumerable<object[]> InvalidRegisterData()
     {
-        var request = new RegisterRequest
-        {
-            Nome = "CPF Inválido",
-            UserName = $"cpf_invalido_{Guid.NewGuid():N}"[..20],
-            Email = $"cpf_invalido_{Guid.NewGuid()}@email.com",
-            Senha = "SenhaForte123",
-            Cpf = "123.456.789-00"
-        };
-
-        var content = JsonContent(request);
-
-        var response = await Client.PostAsync("/api/auth/register", content);
-
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+        var id = Guid.NewGuid();
+        yield return ["CPF inválido", $"cpf_{id:N}"[..20], $"cpf_{id}@email.com", "SenhaForte123", "123.456.789-00"];
+        var id2 = Guid.NewGuid();
+        yield return ["Senha fraca", $"senha_{id2:N}"[..20], $"senha_{id2}@email.com", "fraca", "529.982.247-25"];
+        var id3 = Guid.NewGuid();
+        yield return ["Email inválido", $"email_{id3:N}"[..20], "invalido", "SenhaForte123", "529.982.247-25"];
+        var id4 = Guid.NewGuid();
+        yield return new object[] { "Sem CPF/RG", $"sem_cpf_{id4:N}"[..20], $"sem_cpf_{id4}@email.com", "SenhaForte123", null! };
     }
 
-    [Fact]
-    public async Task PostRegister_WithWeakPassword_ShouldReturn400()
+    [Theory]
+    [MemberData(nameof(InvalidRegisterData))]
+    public async Task PostRegister_WithInvalidData_ShouldReturn400(string nome, string userName, string email, string senha, string? cpf)
     {
         var request = new RegisterRequest
         {
-            Nome = "Senha Fraca",
-            UserName = $"senha_fraca_{Guid.NewGuid():N}"[..20],
-            Email = $"senha_fraca_{Guid.NewGuid()}@email.com",
-            Senha = "fraca",
-            Cpf = "529.982.247-25"
+            Nome = nome,
+            UserName = userName,
+            Email = email,
+            Senha = senha,
+            Cpf = cpf
         };
 
         var content = JsonContent(request);
-
-        var response = await Client.PostAsync("/api/auth/register", content);
-
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
-    public async Task PostRegister_WithInvalidEmail_ShouldReturn400()
-    {
-        var request = new RegisterRequest
-        {
-            Nome = "Email Inválido",
-            UserName = $"email_invalido_{Guid.NewGuid():N}"[..20],
-            Email = "invalido",
-            Senha = "SenhaForte123",
-            Cpf = "529.982.247-25"
-        };
-
-        var content = JsonContent(request);
-
-        var response = await Client.PostAsync("/api/auth/register", content);
-
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
-    public async Task PostRegister_WithoutCpfAndRg_ShouldReturn400()
-    {
-        var request = new RegisterRequest
-        {
-            Nome = "Sem CPF RG",
-            UserName = $"sem_cpf_rg_{Guid.NewGuid():N}"[..20],
-            Email = $"sem_cpf_rg_{Guid.NewGuid()}@email.com",
-            Senha = "SenhaForte123"
-        };
-
-        var content = JsonContent(request);
-
         var response = await Client.PostAsync("/api/auth/register", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
