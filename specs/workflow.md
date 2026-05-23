@@ -4,7 +4,7 @@ Este documento define o fluxo de trabalho obrigatório para toda nova funcionali
 
 ---
 
-## Ciclo: Spec → Review → Implement → Test
+## Ciclo: Spec → Review → Implement → Test → Archive
 
 ```
 [Usuário] → pede funcionalidade
@@ -22,6 +22,8 @@ Este documento define o fluxo de trabalho obrigatório para toda nova funcionali
     ↓
 [Usuário] → aprova resultado
     ↓
+[IA] → Fase 6: Archive
+    ↓  move spec para specs/archive/<feature>/
 [IA] → commit (se aplicável) + pergunta se faz push
 ```
 
@@ -73,12 +75,19 @@ dotnet test
 
 Se falhar, corrigir. Se passar, perguntar ao usuário se deseja commit/push.
 
+## Fase 6 — Archive
+
+Após o commit/push, specs de features/bugs concluídos e mergeados em `main` são movidas para `specs/archive/<nome-da-feature>/`.
+
+Exceção: specs de contrato de API pública de longo prazo podem permanecer em `features/`.
+
 ---
 
 ## Regras de Ouro
 
 1. **Spec primeiro, código depois** — sem exceção
-2. **Spec vive em `specs/features/`** — versionada como código
+2. **Spec vive em `specs/features/` até ser concluída** — versionada como código
 3. **Spec aprovada = contrato** — implementação deve seguir a spec à risca
 4. **Spec pode evoluir** — se durante implementação descobrir algo novo, atualizar a spec primeiro
 5. **Toda spec tem critérios de aceitação** — sem checklist, não está pronta
+6. **Feature concluída e mergeada → spec vai para `specs/archive/<feature>/`** — mantém `features/` limpo para specs ativas

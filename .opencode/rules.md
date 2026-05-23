@@ -97,6 +97,12 @@ tests/
 - Branches merged são deletadas local e remotamente — `git branch -d` e `git push origin --delete`
 - Exceção: branches de longo prazo (`develop`, `main`)
 
+## Workflow de Specs
+
+- Toda nova funcionalidade começa com uma spec em `specs/features/` (ver `specs/workflow.md`)
+- Após a feature ser mergeada em `main`, a spec é movida para `specs/archive/<feature>/`
+- Exceção: specs de contrato de API pública de longo prazo permanecem em `features/`
+
 ## Workflow de Commits
 
 - Ao marcar um todo como `completed`, executar automaticamente:
