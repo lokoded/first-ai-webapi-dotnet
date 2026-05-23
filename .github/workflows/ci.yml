@@ -46,10 +46,10 @@ jobs:
       - name: Build
         run: dotnet build --no-restore --configuration Release
 
-      - name: Testes Unitários
+      - name: Unit Tests
         run: dotnet test tests/FirstWebApi.UnitTests --no-restore --configuration Release --settings coverlet.runsettings --verbosity normal
 
-      - name: Testes de Integração
+      - name: Integration Tests
         run: dotnet test tests/FirstWebApi.IntegrationTests --no-restore --configuration Release --settings coverlet.runsettings --verbosity normal
         env:
           ConnectionStrings__DefaultConnection: ${{ secrets.CONNECTION_STRING_TEST }}
@@ -60,3 +60,14 @@ jobs:
           Kms__AccessKey: fake
           Kms__SecretKey: fake
           ASPNETCORE_ENVIRONMENT: Testing
+
+      - name: Vulnerability Scan
+        run: dotnet list package --vulnerable --include-transitive 2>&1
+
+      - name: Upload Coverage Reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-reports
+          path: tests/**/TestResults/**/coverage.cobertura.xml
+          retention-days: 30

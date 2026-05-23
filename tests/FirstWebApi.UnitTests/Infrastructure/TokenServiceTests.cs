@@ -52,6 +52,4 @@ public class TokenServiceTests
         var principal = _tokenService.ValidateToken("token-invalido");
         principal.Should().BeNull();
     }
-
-
 }

@@ -11,6 +11,7 @@ public class RefreshTokenRepository(AppDbContext context) : IRefreshTokenReposit
     public async Task<RefreshToken?> GetByTokenHashAsync(string tokenHash)
     {
         return await context.RefreshTokens
+            .AsNoTracking()
             .FirstOrDefaultAsync(x => x.TokenHash == tokenHash);
     }
 
@@ -18,6 +19,7 @@ public class RefreshTokenRepository(AppDbContext context) : IRefreshTokenReposit
     {
         return await context.RefreshTokens
             .Where(x => x.UserId == userId && !x.RevokedAt.HasValue && x.ExpiresAt > DateTime.UtcNow)
+            .AsNoTracking()
             .ToListAsync();
     }
 

@@ -1,6 +1,6 @@
 namespace FirstWebApi.Domain.ValueObjects;
 
-public record class Cpf
+public readonly record struct Cpf
 {
     public string Numero { get; }
 

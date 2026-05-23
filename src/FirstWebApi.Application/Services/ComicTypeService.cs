@@ -15,9 +15,9 @@ public class ComicTypeService(IComicTypeRepository comicTypeRepository, IUnitOfW
         return types.Select(t => new ComicTypeResponse { Id = t.Id, Nome = t.Nome }).ToList();
     }
 
-    public async Task<ComicTypeResponse> CreateAsync(string nome)
+    public async Task<ComicTypeResponse> CreateAsync(string name)
     {
-        var comicType = new ComicType(nome);
+        var comicType = new ComicType(name);
         await comicTypeRepository.AddAsync(comicType);
         await unitOfWork.SaveChangesAsync();
         return new ComicTypeResponse { Id = comicType.Id, Nome = comicType.Nome };

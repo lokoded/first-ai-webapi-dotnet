@@ -30,6 +30,7 @@ public class ComicRepository(AppDbContext context) : IComicRepository
     {
         return await context.Comics
             .Include(c => c.ComicType)
+            .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Id == id);
     }
 

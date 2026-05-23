@@ -84,18 +84,15 @@ public class ComicService(
         return true;
     }
 
-    private static ComicResponse MapToResponse(Comic comic)
+    private static ComicResponse MapToResponse(Comic comic) => new()
     {
-        return new ComicResponse
-        {
-            Id = comic.Id,
-            Titulo = comic.Titulo,
-            WebUrl = comic.WebUrl,
-            Observacao = comic.Observacao,
-            ComicTypeId = comic.ComicTypeId,
-            ComicTypeNome = comic.ComicType?.Nome ?? string.Empty,
-            CreatedAt = comic.CreatedAt,
-            UpdatedAt = comic.UpdatedAt
-        };
-    }
+        Id = comic.Id,
+        Titulo = comic.Titulo,
+        WebUrl = comic.WebUrl,
+        Observacao = comic.Observacao,
+        ComicTypeId = comic.ComicTypeId,
+        ComicTypeNome = comic.ComicType?.Nome ?? string.Empty,
+        CreatedAt = comic.CreatedAt,
+        UpdatedAt = comic.UpdatedAt
+    };
 }

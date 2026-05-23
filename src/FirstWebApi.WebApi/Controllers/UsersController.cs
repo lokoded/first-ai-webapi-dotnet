@@ -1,7 +1,7 @@
 using FirstWebApi.Application.DTOs.Request;
+using FirstWebApi.Application.DTOs.Response;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.WebApi.Extensions;
-using FirstWebApi.WebApi.Helpers;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -17,6 +17,8 @@ public class UsersController(
 {
 
     [HttpGet("me")]
+    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetProfile()
     {
         var userId = User.GetUserId();
@@ -27,12 +29,14 @@ public class UsersController(
                 title: "Não autorizado");
 
         var profile = await profileService.GetProfileAsync(userId);
-        MaskingHelper.ApplyMask(profile);
         return Ok(profile);
     }
 
     [HttpPost("me/full")]
     [EnableRateLimiting("Strict")]
+    [ProducesResponseType(typeof(UserResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> GetFullProfile([FromBody] FullProfileRequest request)
     {
         var userId = User.GetUserId();

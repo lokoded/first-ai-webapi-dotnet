@@ -1,4 +1,3 @@
-using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
 using FirstWebApi.Application.DTOs.Request;
@@ -90,9 +89,4 @@ public abstract class IntegrationTestBase : IClassFixture<FirstWebApiFactory>
     protected static StringContent JsonContent<T>(T value) =>
         new(JsonSerializer.Serialize(value), Encoding.UTF8, "application/json");
 
-    protected void SetAuthHeader(string token)
-    {
-        Client.DefaultRequestHeaders.Authorization =
-            new AuthenticationHeaderValue("Bearer", token);
-    }
 }

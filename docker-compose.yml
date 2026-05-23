@@ -32,6 +32,12 @@ services:
     volumes:
       - sqlserver_data:/var/opt/mssql  # Volume named: persiste dados do banco
     restart: unless-stopped       # Reinicia automaticamente se parar
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${SA_PASSWORD}" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # ── LocalStack (AWS Local) ────────────────────────────────
   # Emulador de serviços AWS que roda localmente.
@@ -55,6 +61,12 @@ services:
       - localstack_data:/var/lib/localstack  # Volume named: persiste estado
       - /var/run/docker.sock:/var/run/docker.sock  # Necessário para Lambda criar containers
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   # ── WebAPI (.NET 10) ──────────────────────────────────────
   # Nossa aplicação principal.

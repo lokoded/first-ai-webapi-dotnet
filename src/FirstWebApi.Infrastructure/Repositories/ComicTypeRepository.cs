@@ -12,6 +12,7 @@ public class ComicTypeRepository(AppDbContext context) : IComicTypeRepository
     {
         return await context.ComicTypes
             .OrderBy(ct => ct.Nome)
+            .AsNoTracking()
             .ToListAsync();
     }
 

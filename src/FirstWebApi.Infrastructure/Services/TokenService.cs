@@ -21,8 +21,8 @@ public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
     public string GenerateToken(Guid userId, string email, string nome, IList<string> roles)
     {
         var secretKey = jwtSettings.Value.SecretKey;
-        if (string.IsNullOrEmpty(secretKey))
-            throw new InvalidOperationException("JWT SecretKey não configurada.");
+        if (string.IsNullOrEmpty(secretKey) || secretKey.Length < 32)
+            throw new InvalidOperationException("JWT SecretKey deve ter no mínimo 32 caracteres (256 bits).");
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -51,8 +51,8 @@ public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
     public ClaimsPrincipal? ValidateToken(string token)
     {
         var secretKey = jwtSettings.Value.SecretKey;
-        if (string.IsNullOrEmpty(secretKey))
-            throw new InvalidOperationException("JWT SecretKey não configurada.");
+        if (string.IsNullOrEmpty(secretKey) || secretKey.Length < 32)
+            throw new InvalidOperationException("JWT SecretKey deve ter no mínimo 32 caracteres (256 bits).");
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
 
