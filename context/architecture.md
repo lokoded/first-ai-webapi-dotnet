@@ -92,7 +92,7 @@ FirstWebApi.slnx
 
 Todas as respostas de erro usam `application/problem+json` conforme RFC 9457.
 
-- **Unhandled exceptions** → `ExceptionMiddleware` (src/FirstWebApi.WebApi/Middleware/ExceptionMiddleware.cs) serializa `ProblemDetails` com `type`, `title`, `status`, `detail`, `instance`, `traceId`.
+- **Unhandled exceptions** → `AppExceptionHandler` (implements `IExceptionHandler`) captura e serializa `ProblemDetails` com `type`, `title`, `status`, `detail`, `instance`, `traceId`.
 - **Erros conhecidos** (validação, conflito, não encontrado) → `ControllerBase.Problem()` ou `ValidationProblem()` nos controllers.
 - **Regra**: nunca retornar `BadRequest()`, `NotFound()` ou `Conflict()` diretamente; sempre usar `Problem()` ou `ValidationProblem()` para manter o formato padronizado.
 - O campo `type` deve ser uma URI documentando o problema (`about:blank` é aceitável para casos sem semântica adicional).
