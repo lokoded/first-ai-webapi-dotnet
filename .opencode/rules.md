@@ -81,7 +81,7 @@ tests/
 
 - CPF, RG e endereço são **sempre cifrados** via `IEncryptionService` — nunca em texto puro
 - Logs **nunca** contêm secrets, CPF, RG ou dados sensíveis
-- Exception middleware nunca expõe stack trace
+- AppExceptionHandler (IExceptionHandler) nunca expõe stack trace
 - Configurações sensíveis via `.env` (não versionado)
 - Rate limiting deve ser considerado em endpoints de auth
 - Refresh tokens para renovação segura de sessão

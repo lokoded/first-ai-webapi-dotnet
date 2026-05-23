@@ -51,7 +51,7 @@ FirstWebApi.slnx
 - [x] Cache Redis via decorators
 - [x] Paginação (em memória — precisa migrar para server-side)
 - [x] Health check básico
-- [x] Exception middleware com RFC 9457
+- [x] Exception handler (IExceptionHandler) com RFC 9457
 - [x] Logging em arquivo com TraceId
 - [x] FluentValidation em todos os inputs
 - [x] Rate limiting (Auth: 10 req/min, Default: 100 req/min)
