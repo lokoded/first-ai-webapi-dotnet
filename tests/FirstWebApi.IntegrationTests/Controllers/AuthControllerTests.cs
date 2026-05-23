@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
@@ -6,19 +5,10 @@ using FluentAssertions;
 
 namespace FirstWebApi.IntegrationTests.Controllers;
 
-[Collection("Database")]
-public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
+public class AuthControllerTests(FirstWebApiFactory factory) : IntegrationTestBase(factory)
 {
-    private readonly HttpClient _client;
-
-    public AuthControllerTests(FirstWebApiFactory factory)
-    {
-        var handler = factory.Server.CreateHandler();
-        _client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost") };
-    }
-
-    private static StringContent JsonContent<T>(T value) =>
-        new(JsonSerializer.Serialize(value), Encoding.UTF8, "application/json");
+    private readonly HttpClient _cookieClient = new(factory.Server.CreateHandler())
+        { BaseAddress = new Uri("http://localhost") };
 
     [Fact]
     public async Task PostRegister_WithValidData_ShouldReturn201()
@@ -34,7 +24,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
         var content = JsonContent(request);
 
-        var response = await _client.PostAsync("/api/auth/register", content);
+        var response = await Client.PostAsync("/api/auth/register", content);
 
         var body = await response.Content.ReadAsStringAsync();
 
@@ -64,8 +54,8 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
         var content = JsonContent(request);
 
-        await _client.PostAsync("/api/auth/register", content);
-        var response = await _client.PostAsync("/api/auth/register", content);
+        await Client.PostAsync("/api/auth/register", content);
+        var response = await Client.PostAsync("/api/auth/register", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.Conflict);
     }
@@ -86,7 +76,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
         var registerContent = JsonContent(register);
 
-        await _client.PostAsync("/api/auth/register", registerContent);
+        await Client.PostAsync("/api/auth/register", registerContent);
 
         var login = new LoginRequest
         {
@@ -96,7 +86,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
         var loginContent = JsonContent(login);
 
-        var response = await _client.PostAsync("/api/auth/login", loginContent);
+        var response = await Client.PostAsync("/api/auth/login", loginContent);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 
@@ -119,7 +109,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
         var content = JsonContent(login);
 
-        var response = await _client.PostAsync("/api/auth/login", content);
+        var response = await Client.PostAsync("/api/auth/login", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
     }
@@ -138,7 +128,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
         var content = JsonContent(request);
 
-        var response = await _client.PostAsync("/api/auth/register", content);
+        var response = await Client.PostAsync("/api/auth/register", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
     }
@@ -157,7 +147,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
         var content = JsonContent(request);
 
-        var response = await _client.PostAsync("/api/auth/register", content);
+        var response = await Client.PostAsync("/api/auth/register", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
     }
@@ -176,7 +166,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
         var content = JsonContent(request);
 
-        var response = await _client.PostAsync("/api/auth/register", content);
+        var response = await Client.PostAsync("/api/auth/register", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
     }
@@ -194,7 +184,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
         var content = JsonContent(request);
 
-        var response = await _client.PostAsync("/api/auth/register", content);
+        var response = await Client.PostAsync("/api/auth/register", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
     }
@@ -212,7 +202,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Cpf = "529.982.247-25"
         };
         var registerContent = JsonContent(register);
-        var registerResponse = await _client.PostAsync("/api/auth/register", registerContent);
+        var registerResponse = await _cookieClient.PostAsync("/api/auth/register", registerContent);
         registerResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
 
         var refreshToken = GetRefreshTokenFromResponse(registerResponse);
@@ -220,7 +210,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh");
         request.Headers.Add("Cookie", $"RefreshToken={refreshToken}");
-        var refreshResponse = await _client.SendAsync(request);
+        var refreshResponse = await _cookieClient.SendAsync(request);
 
         refreshResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
         
@@ -242,7 +232,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Cpf = "529.982.247-25"
         };
         var registerContent = JsonContent(register);
-        var registerResponse = await _client.PostAsync("/api/auth/register", registerContent);
+        var registerResponse = await _cookieClient.PostAsync("/api/auth/register", registerContent);
         registerResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
 
         var registerBody = await registerResponse.Content.ReadAsStringAsync();
@@ -254,14 +244,14 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
         var refreshToken = GetRefreshTokenFromResponse(registerResponse);
         refreshToken.Should().NotBeNullOrEmpty();
 
-        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
+        _cookieClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
 
-        var response = await _client.PostAsync("/api/auth/revoke", null);
+        var response = await _cookieClient.PostAsync("/api/auth/revoke", null);
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
 
         var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh");
         request.Headers.Add("Cookie", $"RefreshToken={refreshToken}");
-        var refreshResponse = await _client.SendAsync(request);
+        var refreshResponse = await _cookieClient.SendAsync(request);
 
         refreshResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
     }
