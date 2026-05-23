@@ -39,9 +39,7 @@ public class ComicsControllerTests(FirstWebApiFactory factory) : IntegrationTest
             ComicTypeId = comicTypeId
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(request);
 
         var response = await Client.PostAsync("/api/comics", content);
         var body = await response.Content.ReadAsStringAsync();
@@ -78,9 +76,7 @@ public class ComicsControllerTests(FirstWebApiFactory factory) : IntegrationTest
             ComicTypeId = Guid.NewGuid()
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(request);
 
         var response = await Client.PostAsync("/api/comics", content);
 
@@ -101,9 +97,7 @@ public class ComicsControllerTests(FirstWebApiFactory factory) : IntegrationTest
             ComicTypeId = Guid.NewGuid()
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(request);
 
         var response = await Client.PostAsync("/api/comics", content);
 
@@ -124,9 +118,7 @@ public class ComicsControllerTests(FirstWebApiFactory factory) : IntegrationTest
             ComicTypeId = Guid.NewGuid()
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(request);
 
         var response = await Client.PostAsync("/api/comics", content);
 
@@ -159,9 +151,7 @@ public class ComicsControllerTests(FirstWebApiFactory factory) : IntegrationTest
             ComicTypeId = Guid.NewGuid()
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(request);
 
         var response = await Client.PutAsync($"/api/comics/{Guid.NewGuid()}", content);
 
@@ -195,9 +185,7 @@ public class ComicsControllerTests(FirstWebApiFactory factory) : IntegrationTest
             ComicTypeId = comicTypeId
         };
 
-        var createContent = new StringContent(
-            JsonSerializer.Serialize(createRequest),
-            Encoding.UTF8, "application/json");
+        var createContent = JsonContent(createRequest);
 
         var createResponse = await Client.PostAsync("/api/comics", createContent);
         var createBody = await createResponse.Content.ReadAsStringAsync();
@@ -229,9 +217,7 @@ public class ComicsControllerTests(FirstWebApiFactory factory) : IntegrationTest
             ComicTypeId = comicTypeId
         };
 
-        var createContent = new StringContent(
-            JsonSerializer.Serialize(createRequest),
-            Encoding.UTF8, "application/json");
+        var createContent = JsonContent(createRequest);
 
         var createResponse = await Client.PostAsync("/api/comics", createContent);
         var createBody = await createResponse.Content.ReadAsStringAsync();
@@ -245,9 +231,7 @@ public class ComicsControllerTests(FirstWebApiFactory factory) : IntegrationTest
             ComicTypeId = comicTypeId
         };
 
-        var updateContent = new StringContent(
-            JsonSerializer.Serialize(updateRequest),
-            Encoding.UTF8, "application/json");
+        var updateContent = JsonContent(updateRequest);
 
         var response = await Client.PutAsync($"/api/comics/{created!.Id}", updateContent);
 
@@ -269,9 +253,7 @@ public class ComicsControllerTests(FirstWebApiFactory factory) : IntegrationTest
             ComicTypeId = comicTypeId
         };
 
-        var createContent = new StringContent(
-            JsonSerializer.Serialize(createRequest),
-            Encoding.UTF8, "application/json");
+        var createContent = JsonContent(createRequest);
 
         var createResponse = await Client.PostAsync("/api/comics", createContent);
         var createBody = await createResponse.Content.ReadAsStringAsync();

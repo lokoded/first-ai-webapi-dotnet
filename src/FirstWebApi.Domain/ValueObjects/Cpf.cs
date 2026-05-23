@@ -24,7 +24,7 @@ public readonly record struct Cpf
 
     private static bool ValidarDigitos(string cpf)
     {
-        var digitos = cpf.Select(c => int.Parse(c.ToString())).ToArray();
+        var digitos = cpf.Select(c => c - '0').ToArray();
 
         var digito1 = CalcularDigito(digitos, 9);
         if (digitos[9] != digito1) return false;

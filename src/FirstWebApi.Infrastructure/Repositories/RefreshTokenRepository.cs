@@ -21,6 +21,10 @@ public class RefreshTokenRepository(AppDbContext context) : IRefreshTokenReposit
             .ToListAsync();
     }
 
+    /// <summary>
+    /// Remove tokens expirados criados há mais de <paramref name="keepDays"/> dias.
+    /// Tokens expirados recentes são preservados para auditoria.
+    /// </summary>
     public async Task<int> DeleteExpiredAsync(int keepDays)
     {
         var cutoff = DateTime.UtcNow.AddDays(-keepDays);

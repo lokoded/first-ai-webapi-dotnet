@@ -89,9 +89,6 @@ public class ComicServiceTests
             .Callback<Comic>(c => captured = c)
             .Returns(Task.CompletedTask);
 
-        _comicRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync((Guid id) => captured);
-
         _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(1);
 
         var result = await _comicService.CreateAsync(request, _userId);

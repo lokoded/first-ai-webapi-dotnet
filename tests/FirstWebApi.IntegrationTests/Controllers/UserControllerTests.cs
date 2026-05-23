@@ -65,9 +65,7 @@ public class UserControllerTests(FirstWebApiFactory factory) : IntegrationTestBa
             Cpf = "529.982.247-25"
         };
 
-        var registerContent = new StringContent(
-            JsonSerializer.Serialize(register),
-            Encoding.UTF8, "application/json");
+        var registerContent = JsonContent(register);
 
         var registerResponse = await Client.PostAsync("/api/auth/register", registerContent);
         var registerBody = await registerResponse.Content.ReadAsStringAsync();
@@ -82,9 +80,7 @@ public class UserControllerTests(FirstWebApiFactory factory) : IntegrationTestBa
             Senha = password
         };
 
-        var fullContent = new StringContent(
-            JsonSerializer.Serialize(fullRequest),
-            Encoding.UTF8, "application/json");
+        var fullContent = JsonContent(fullRequest);
 
         var response = await Client.PostAsync("/api/users/me/full", fullContent);
 
@@ -114,9 +110,7 @@ public class UserControllerTests(FirstWebApiFactory factory) : IntegrationTestBa
             Rg = "12.345.678-9"
         };
 
-        var registerContent = new StringContent(
-            JsonSerializer.Serialize(register),
-            Encoding.UTF8, "application/json");
+        var registerContent = JsonContent(register);
 
         var registerResponse = await Client.PostAsync("/api/auth/register", registerContent);
         var registerBody = await registerResponse.Content.ReadAsStringAsync();
@@ -131,9 +125,7 @@ public class UserControllerTests(FirstWebApiFactory factory) : IntegrationTestBa
             Senha = "SenhaErrada123"
         };
 
-        var fullContent = new StringContent(
-            JsonSerializer.Serialize(fullRequest),
-            Encoding.UTF8, "application/json");
+        var fullContent = JsonContent(fullRequest);
 
         var response = await Client.PostAsync("/api/users/me/full", fullContent);
 

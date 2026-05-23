@@ -34,6 +34,5 @@ public class Address
         Iv = data.Iv;
         Tag = data.Tag;
         EncryptedDataKey = data.EncryptedDataKey;
-        UpdatedAt = DateTime.UtcNow;
     }
 }

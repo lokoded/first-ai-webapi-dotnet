@@ -17,6 +17,9 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
         _client = factory.CreateClient();
     }
 
+    private static StringContent JsonContent<T>(T value) =>
+        new(JsonSerializer.Serialize(value), Encoding.UTF8, "application/json");
+
 
     [Fact]
     public async Task PostRegister_WithValidData_ShouldReturn201()
@@ -30,10 +33,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Cpf = "529.982.247-25"
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8,
-            "application/json");
+        var content = JsonContent(request);
 
         var response = await _client.PostAsync("/api/auth/register", content);
 
@@ -62,10 +62,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Cpf = "529.982.247-25"
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8,
-            "application/json");
+        var content = JsonContent(request);
 
         await _client.PostAsync("/api/auth/register", content);
         var response = await _client.PostAsync("/api/auth/register", content);
@@ -87,9 +84,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Cpf = "529.982.247-25"
         };
 
-        var registerContent = new StringContent(
-            JsonSerializer.Serialize(register),
-            Encoding.UTF8, "application/json");
+        var registerContent = JsonContent(register);
 
         await _client.PostAsync("/api/auth/register", registerContent);
 
@@ -99,9 +94,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Senha = "SenhaForte123"
         };
 
-        var loginContent = new StringContent(
-            JsonSerializer.Serialize(login),
-            Encoding.UTF8, "application/json");
+        var loginContent = JsonContent(login);
 
         var response = await _client.PostAsync("/api/auth/login", loginContent);
 
@@ -124,9 +117,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Senha = "SenhaErrada"
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(login),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(login);
 
         var response = await _client.PostAsync("/api/auth/login", content);
 
@@ -145,9 +136,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Cpf = "123.456.789-00"
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(request);
 
         var response = await _client.PostAsync("/api/auth/register", content);
 
@@ -166,9 +155,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Cpf = "529.982.247-25"
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(request);
 
         var response = await _client.PostAsync("/api/auth/register", content);
 
@@ -187,9 +174,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Cpf = "529.982.247-25"
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(request);
 
         var response = await _client.PostAsync("/api/auth/register", content);
 
@@ -207,9 +192,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Senha = "SenhaForte123"
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(request);
 
         var response = await _client.PostAsync("/api/auth/register", content);
 
@@ -228,7 +211,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Senha = "SenhaForte123",
             Cpf = "529.982.247-25"
         };
-        var registerContent = new StringContent(JsonSerializer.Serialize(register), Encoding.UTF8, "application/json");
+        var registerContent = JsonContent(register);
         var registerResponse = await _client.PostAsync("/api/auth/register", registerContent);
         registerResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
 
@@ -240,7 +223,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
         authResponse!.RefreshToken.Should().NotBeNullOrEmpty();
 
         var refreshRequest = new RefreshTokenRequest { RefreshToken = authResponse.RefreshToken };
-        var refreshContent = new StringContent(JsonSerializer.Serialize(refreshRequest), Encoding.UTF8, "application/json");
+        var refreshContent = JsonContent(refreshRequest);
         var refreshResponse = await _client.PostAsync("/api/auth/refresh", refreshContent);
 
         refreshResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
@@ -267,7 +250,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Senha = "SenhaForte123",
             Cpf = "529.982.247-25"
         };
-        var registerContent = new StringContent(JsonSerializer.Serialize(register), Encoding.UTF8, "application/json");
+        var registerContent = JsonContent(register);
         var registerResponse = await _client.PostAsync("/api/auth/register", registerContent);
         registerResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
 
@@ -283,7 +266,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
 
         var refreshRequest = new RefreshTokenRequest { RefreshToken = authResponse.RefreshToken };
-        var refreshContent = new StringContent(JsonSerializer.Serialize(refreshRequest), Encoding.UTF8, "application/json");
+        var refreshContent = JsonContent(refreshRequest);
         var refreshResponse = await _client.PostAsync("/api/auth/refresh", refreshContent);
 
         refreshResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);

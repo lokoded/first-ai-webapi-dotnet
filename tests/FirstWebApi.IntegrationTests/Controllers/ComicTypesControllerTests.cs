@@ -46,9 +46,7 @@ public class ComicTypesControllerTests(FirstWebApiFactory factory) : Integration
 
         var request = new ComicTypeRequest { Nome = "Mangá" };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(request);
 
         var response = await Client.PostAsync("/api/admin/comic-types", content);
 
@@ -61,9 +59,7 @@ public class ComicTypesControllerTests(FirstWebApiFactory factory) : Integration
         Client.DefaultRequestHeaders.Authorization = null;
 
         var request = new ComicTypeRequest { Nome = "Mangá" };
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(request);
 
         var response = await Client.PostAsync("/api/admin/comic-types", content);
 
@@ -89,12 +85,16 @@ public class ComicTypesControllerTests(FirstWebApiFactory factory) : Integration
 
         var request = new ComicTypeRequest { Nome = $"Mangá_{Guid.NewGuid():N}"[..15] };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(request);
 
         var response = await Client.PostAsync("/api/admin/comic-types", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
+
+        var body = await response.Content.ReadAsStringAsync();
+        var comicType = JsonSerializer.Deserialize<ComicTypeResponse>(body,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        comicType.Should().NotBeNull();
+        comicType!.Nome.Should().StartWith("Mangá_");
     }
 }

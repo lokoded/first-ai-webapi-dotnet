@@ -5,7 +5,6 @@ using FirstWebApi.WebApi.Extensions;
 using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace FirstWebApi.WebApi.Controllers;
@@ -28,7 +27,7 @@ public class ComicsController(
     {
         var userId = User.GetUserId();
         if (userId == Guid.Empty)
-            return Problem(detail: "Token inválido.", statusCode: 401, title: "Não autorizado");
+            return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
         var result = await comicService.GetAllAsync(userId, page, pageSize);
         return Ok(result);
@@ -42,7 +41,7 @@ public class ComicsController(
     {
         var userId = User.GetUserId();
         if (userId == Guid.Empty)
-            return Problem(detail: "Token inválido.", statusCode: 401, title: "Não autorizado");
+            return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
         var result = await comicService.GetByIdAsync(id, userId);
         if (result is null)
@@ -60,7 +59,7 @@ public class ComicsController(
     {
         var userId = User.GetUserId();
         if (userId == Guid.Empty)
-            return Problem(detail: "Token inválido.", statusCode: 401, title: "Não autorizado");
+            return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
         var validation = await validator.ValidateAsync(request);
         if (!validation.IsValid)
@@ -79,7 +78,7 @@ public class ComicsController(
     {
         var userId = User.GetUserId();
         if (userId == Guid.Empty)
-            return Problem(detail: "Token inválido.", statusCode: 401, title: "Não autorizado");
+            return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
         var validation = await validator.ValidateAsync(request);
         if (!validation.IsValid)
@@ -100,7 +99,7 @@ public class ComicsController(
     {
         var userId = User.GetUserId();
         if (userId == Guid.Empty)
-            return Problem(detail: "Token inválido.", statusCode: 401, title: "Não autorizado");
+            return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
         var success = await comicService.DeleteAsync(id, userId);
         if (!success)

@@ -34,9 +34,7 @@ public abstract class IntegrationTestBase : IClassFixture<FirstWebApiFactory>
             Cpf = "529.982.247-25"
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(register),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(register);
 
         var response = await Client.PostAsync("/api/auth/register", content);
         response.EnsureSuccessStatusCode();
@@ -60,9 +58,7 @@ public abstract class IntegrationTestBase : IClassFixture<FirstWebApiFactory>
             Cpf = "529.982.247-25"
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(register),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(register);
 
         var response = await Client.PostAsync("/api/auth/register", content);
         response.EnsureSuccessStatusCode();
@@ -80,7 +76,7 @@ public abstract class IntegrationTestBase : IClassFixture<FirstWebApiFactory>
         }
 
         var login = new LoginRequest { Email = email, Senha = "SenhaForte123" };
-        var loginContent = new StringContent(JsonSerializer.Serialize(login), Encoding.UTF8, "application/json");
+        var loginContent = JsonContent(login);
         var loginResponse = await Client.PostAsync("/api/auth/login", loginContent);
         loginResponse.EnsureSuccessStatusCode();
 
@@ -90,6 +86,9 @@ public abstract class IntegrationTestBase : IClassFixture<FirstWebApiFactory>
 
         return loginAuthResponse!.Token;
     }
+
+    protected static StringContent JsonContent<T>(T value) =>
+        new(JsonSerializer.Serialize(value), Encoding.UTF8, "application/json");
 
     protected void SetAuthHeader(string token)
     {
