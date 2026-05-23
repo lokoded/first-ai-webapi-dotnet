@@ -5,7 +5,8 @@
   "small_model": "anthropic/claude-haiku-3-5",
   "instructions": [
     ".opencode/rules.md",
-    "AGENTS.md"
+    "AGENTS.md",
+    "specs/workflow.md"
   ],
   "default_agent": "dev-agent",
   "command": {

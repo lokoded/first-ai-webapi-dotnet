@@ -3,7 +3,7 @@ using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace FirstWebApi.Infrastructure.Data.Migrations
+namespace FirstWebApi.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class InitialCreate : Migration
@@ -31,15 +31,8 @@ namespace FirstWebApi.Infrastructure.Data.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Nome = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: false),
-                    Role = table.Column<int>(type: "int", nullable: false),
-                    CpfCiphertext = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
-                    CpfIv = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
-                    CpfTag = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
-                    CpfEncryptedDataKey = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
-                    RgCiphertext = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
-                    RgIv = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
-                    RgTag = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
-                    RgEncryptedDataKey = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
+                    CpfDados = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
+                    RgDados = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
                     UserName = table.Column<string>(type: "nvarchar(256)", maxLength: 256, nullable: true),
@@ -68,7 +61,8 @@ namespace FirstWebApi.Infrastructure.Data.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     Nome = table.Column<string>(type: "nvarchar(50)", maxLength: 50, nullable: false),
-                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -102,10 +96,7 @@ namespace FirstWebApi.Infrastructure.Data.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
-                    Ciphertext = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
-                    Iv = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
-                    Tag = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
-                    EncryptedDataKey = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
+                    Dados = table.Column<byte[]>(type: "varbinary(max)", nullable: true),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
                 },
@@ -206,6 +197,28 @@ namespace FirstWebApi.Infrastructure.Data.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "RefreshTokens",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    UserId = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
+                    TokenHash = table.Column<string>(type: "nvarchar(128)", maxLength: 128, nullable: false),
+                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    RevokedAt = table.Column<DateTime>(type: "datetime2", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_RefreshTokens", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_RefreshTokens_AspNetUsers_UserId",
+                        column: x => x.UserId,
+                        principalTable: "AspNetUsers",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Comics",
                 columns: table => new
                 {
@@ -295,6 +308,16 @@ namespace FirstWebApi.Infrastructure.Data.Migrations
                 table: "ComicTypes",
                 column: "Nome",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_TokenHash",
+                table: "RefreshTokens",
+                column: "TokenHash");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_RefreshTokens_UserId_RevokedAt",
+                table: "RefreshTokens",
+                columns: new[] { "UserId", "RevokedAt" });
         }
 
         /// <inheritdoc />
@@ -322,13 +345,16 @@ namespace FirstWebApi.Infrastructure.Data.Migrations
                 name: "Comics");
 
             migrationBuilder.DropTable(
+                name: "RefreshTokens");
+
+            migrationBuilder.DropTable(
                 name: "AspNetRoles");
 
             migrationBuilder.DropTable(
-                name: "AspNetUsers");
+                name: "ComicTypes");
 
             migrationBuilder.DropTable(
-                name: "ComicTypes");
+                name: "AspNetUsers");
         }
     }
 }

@@ -12,19 +12,7 @@ public class AddressConfiguration : IEntityTypeConfiguration<Address>
 
         builder.HasKey(a => a.Id);
 
-        builder.Property(a => a.Ciphertext)
-            .HasColumnType("varbinary(max)")
-            .IsRequired(false);
-
-        builder.Property(a => a.Iv)
-            .HasColumnType("varbinary(max)")
-            .IsRequired(false);
-
-        builder.Property(a => a.Tag)
-            .HasColumnType("varbinary(max)")
-            .IsRequired(false);
-
-        builder.Property(a => a.EncryptedDataKey)
+        builder.Property(a => a.Dados)
             .HasColumnType("varbinary(max)")
             .IsRequired(false);
 

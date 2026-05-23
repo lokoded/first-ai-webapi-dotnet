@@ -24,7 +24,7 @@ public readonly record struct Cpf
 
     private static bool ValidarDigitos(string cpf)
     {
-        var digitos = cpf.Select(c => int.Parse(c.ToString())).ToArray();
+        var digitos = cpf.Select(c => c - '0').ToArray();
 
         var digito1 = CalcularDigito(digitos, 9);
         if (digitos[9] != digito1) return false;
@@ -43,6 +43,11 @@ public readonly record struct Cpf
         return resto < 2 ? 0 : 11 - resto;
     }
 
-    public override string ToString() => Numero;
-    public string Formatado() => $"{Numero[..3]}.{Numero[3..6]}.{Numero[6..9]}-{Numero[9..]}";
+    public override string ToString() => Numero ?? throw new InvalidOperationException("CPF não inicializado.");
+    public string Formatado()
+    {
+        if (Numero is null)
+            throw new InvalidOperationException("CPF não inicializado.");
+        return $"{Numero[..3]}.{Numero[3..6]}.{Numero[6..9]}-{Numero[9..]}";
+    }
 }

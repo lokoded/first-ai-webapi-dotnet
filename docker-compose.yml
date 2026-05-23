@@ -28,23 +28,16 @@ services:
       - SA_PASSWORD=${SA_PASSWORD} # Senha do usuário sa (vem do .env)
       - MSSQL_PID=Developer       # Edição gratuita para desenvolvimento
     ports:
-      - "1433:1433"               # Mapeia porta do host para o container
+      - "1433:1433"               # Porta padrão SQL Server
     volumes:
       - sqlserver_data:/var/opt/mssql  # Volume named: persiste dados do banco
     restart: unless-stopped       # Reinicia automaticamente se parar
-
-  # ── Redis (Cache) ─────────────────────────────────────────
-  # Banco em memória, usado como cache distribuído.
-  # O .NET acessa via IDistributedCache (StackExchange.Redis).
-  # Versão Alpine = imagem mais leve (~5MB).
-  redis:
-    image: redis:alpine
-    container_name: firstwebapi-redis
-    ports:
-      - "6379:6379"               # Porta padrão do Redis
-    volumes:
-      - redis_data:/data          # Volume named: persiste snapshots do cache
-    restart: unless-stopped
+    healthcheck:
+      test: /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "${SA_PASSWORD}" -C -Q "SELECT 1" || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
   # ── LocalStack (AWS Local) ────────────────────────────────
   # Emulador de serviços AWS que roda localmente.
@@ -58,8 +51,7 @@ services:
     image: localstack/localstack-pro
     container_name: firstwebapi-localstack
     ports:
-      - "4566:4566"               # Gateway único para todos os serviços AWS
-      - "4510-4559:4510-4559"     # Port range para serviços externos (ex: Lambda)
+      - "14566:4566"              # Gateway único LocalStack (porta alternativa)
     environment:
       - SERVICES=kms,lambda       # Habilita apenas KMS e Lambda (economiza RAM)
       - AWS_DEFAULT_REGION=us-east-1
@@ -69,6 +61,12 @@ services:
       - localstack_data:/var/lib/localstack  # Volume named: persiste estado
       - /var/run/docker.sock:/var/run/docker.sock  # Necessário para Lambda criar containers
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
 
   # ── WebAPI (.NET 10) ──────────────────────────────────────
   # Nossa aplicação principal.
@@ -87,7 +85,6 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=${CONNECTION_STRING}
-      - ConnectionStrings__Redis=redis:6379
       - Kms__Endpoint=http://localstack:4566
       - Kms__UseHttp=true
       - Kms__KeyId=alias/firstwebapi-key
@@ -97,7 +94,6 @@ services:
       - Jwt__SecretKey=${JWT_SECRET_KEY:?}
     depends_on:
       - sqlserver
-      - redis
       - localstack
     restart: unless-stopped
 
@@ -109,5 +105,4 @@ services:
 # Comando para inspecionar: docker volume ls / docker volume inspect <nome>
 volumes:
   sqlserver_data:     # Armazena arquivos .mdf/.ldf do SQL Server
-  redis_data:         # Armazena dump.rdb do Redis
   localstack_data:    # Armazena estado do LocalStack (chaves KMS)

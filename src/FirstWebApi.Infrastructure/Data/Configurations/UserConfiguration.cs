@@ -12,35 +12,11 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .IsRequired()
             .HasMaxLength(200);
 
-        builder.Property(u => u.CpfCiphertext)
+        builder.Property(u => u.CpfDados)
             .HasColumnType("varbinary(max)")
             .IsRequired(false);
 
-        builder.Property(u => u.CpfIv)
-            .HasColumnType("varbinary(max)")
-            .IsRequired(false);
-
-        builder.Property(u => u.CpfTag)
-            .HasColumnType("varbinary(max)")
-            .IsRequired(false);
-
-        builder.Property(u => u.CpfEncryptedDataKey)
-            .HasColumnType("varbinary(max)")
-            .IsRequired(false);
-
-        builder.Property(u => u.RgCiphertext)
-            .HasColumnType("varbinary(max)")
-            .IsRequired(false);
-
-        builder.Property(u => u.RgIv)
-            .HasColumnType("varbinary(max)")
-            .IsRequired(false);
-
-        builder.Property(u => u.RgTag)
-            .HasColumnType("varbinary(max)")
-            .IsRequired(false);
-
-        builder.Property(u => u.RgEncryptedDataKey)
+        builder.Property(u => u.RgDados)
             .HasColumnType("varbinary(max)")
             .IsRequired(false);
     }

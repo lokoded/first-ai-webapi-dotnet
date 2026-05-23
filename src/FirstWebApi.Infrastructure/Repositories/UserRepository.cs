@@ -5,33 +5,21 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FirstWebApi.Infrastructure.Repositories;
 
-public class UserRepository : IUserRepository
+public class UserRepository(AppDbContext context) : IUserRepository
 {
-    private readonly AppDbContext _context;
 
-    public UserRepository(AppDbContext context)
+    public async Task<User?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        _context = context;
+        return await context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == id, cancellationToken);
     }
 
-    public async Task<User?> GetByIdAsync(Guid id)
+    public async Task<User?> GetByEmailAsync(string email, CancellationToken cancellationToken = default)
     {
-        return await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
+        return await context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Email == email, cancellationToken);
     }
 
-    public async Task<User?> GetByEmailAsync(string email)
+    public async Task AddAsync(User user, CancellationToken cancellationToken = default)
     {
-        return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
-    }
-
-    public async Task AddAsync(User user)
-    {
-        await _context.Users.AddAsync(user);
-    }
-
-    public Task UpdateAsync(User user)
-    {
-        _context.Users.Update(user);
-        return Task.CompletedTask;
+        await context.Users.AddAsync(user, cancellationToken);
     }
 }

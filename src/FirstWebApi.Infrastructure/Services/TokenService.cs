@@ -3,25 +3,26 @@ using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using FirstWebApi.Application.Interfaces;
-using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
 namespace FirstWebApi.Infrastructure.Services;
 
-public class TokenService : ITokenService
+public class JwtSettings
 {
-    private readonly IConfiguration _configuration;
+    public string SecretKey { get; set; } = string.Empty;
+    public string Issuer { get; set; } = string.Empty;
+    public string Audience { get; set; } = string.Empty;
+}
 
-    public TokenService(IConfiguration configuration)
-    {
-        _configuration = configuration;
-    }
+public class TokenService(IOptions<JwtSettings> jwtSettings) : ITokenService
+{
 
     public string GenerateToken(Guid userId, string email, string nome, IList<string> roles)
     {
-        var jwtSettings = _configuration.GetSection("Jwt");
-        var secretKey = jwtSettings["SecretKey"]
-            ?? throw new InvalidOperationException("JWT SecretKey não configurada.");
+        var secretKey = jwtSettings.Value.SecretKey;
+        if (string.IsNullOrEmpty(secretKey) || secretKey.Length < 32)
+            throw new InvalidOperationException("JWT SecretKey deve ter no mínimo 32 caracteres (256 bits).");
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
@@ -37,8 +38,8 @@ public class TokenService : ITokenService
         claims.AddRange(roles.Select(role => new Claim(ClaimTypes.Role, role)));
 
         var token = new JwtSecurityToken(
-            issuer: jwtSettings["Issuer"],
-            audience: jwtSettings["Audience"],
+            issuer: jwtSettings.Value.Issuer,
+            audience: jwtSettings.Value.Audience,
             claims: claims,
             expires: DateTime.UtcNow.AddHours(8),
             signingCredentials: credentials
@@ -49,9 +50,9 @@ public class TokenService : ITokenService
 
     public ClaimsPrincipal? ValidateToken(string token)
     {
-        var jwtSettings = _configuration.GetSection("Jwt");
-        var secretKey = jwtSettings["SecretKey"]
-            ?? throw new InvalidOperationException("JWT SecretKey não configurada.");
+        var secretKey = jwtSettings.Value.SecretKey;
+        if (string.IsNullOrEmpty(secretKey) || secretKey.Length < 32)
+            throw new InvalidOperationException("JWT SecretKey deve ter no mínimo 32 caracteres (256 bits).");
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey));
 
@@ -63,9 +64,9 @@ public class TokenService : ITokenService
                 ValidateIssuerSigningKey = true,
                 IssuerSigningKey = key,
                 ValidateIssuer = true,
-                ValidIssuer = jwtSettings["Issuer"],
+                ValidIssuer = jwtSettings.Value.Issuer,
                 ValidateAudience = true,
-                ValidAudience = jwtSettings["Audience"],
+                ValidAudience = jwtSettings.Value.Audience,
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.Zero
             }, out _);

@@ -24,7 +24,6 @@ public class RefreshToken
 
     public bool IsExpired => DateTime.UtcNow >= ExpiresAt;
     public bool IsRevoked => RevokedAt.HasValue;
-    public bool IsActive => !IsExpired && !IsRevoked;
 
     public void Revoke()
     {

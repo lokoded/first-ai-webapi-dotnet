@@ -1,4 +1,5 @@
 using System.Text;
+using DotNetEnv;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Application.Services;
 using FirstWebApi.Application.Validators;
@@ -6,9 +7,8 @@ using FirstWebApi.Domain.Entities;
 using FirstWebApi.Domain.Interfaces;
 using FirstWebApi.Infrastructure.Data;
 using FirstWebApi.Infrastructure.Repositories;
-using FirstWebApi.Infrastructure.Repositories.Decorators;
 using FirstWebApi.Infrastructure.Services;
-using FirstWebApi.WebApi.Logging;
+using FirstWebApi.WebApi;
 using FirstWebApi.WebApi.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -17,16 +17,13 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using FluentValidation;
-using StackExchange.Redis;
 using System.Threading.RateLimiting;
+
+DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers()
-    .ConfigureApiBehaviorOptions(options =>
-    {
-        options.SuppressModelStateInvalidFilter = true;
-    });
+builder.Services.AddControllers();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddValidatorsFromAssemblyContaining<RegisterRequestValidator>();
 builder.Services.AddProblemDetails();
@@ -65,10 +62,12 @@ builder.Services.AddIdentity<User, IdentityRole<Guid>>(options =>
 .AddEntityFrameworkStores<AppDbContext>()
 .AddDefaultTokenProviders();
 
-var jwtSettings = builder.Configuration.GetSection("Jwt");
-var secretKey = jwtSettings["SecretKey"]
+var jwtSettingsSection = builder.Configuration.GetSection("Jwt");
+var secretKey = jwtSettingsSection["SecretKey"]
     ?? throw new InvalidOperationException(
         "JWT SecretKey nao configurado. Use env var Jwt__SecretKey ou dotnet user-secrets set \"Jwt:SecretKey\" \"<chave>\".");
+
+builder.Services.Configure<JwtSettings>(jwtSettingsSection);
 
 builder.Services.AddAuthentication(options =>
 {
@@ -82,9 +81,9 @@ builder.Services.AddAuthentication(options =>
         ValidateIssuerSigningKey = true,
         IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(secretKey)),
         ValidateIssuer = true,
-        ValidIssuer = jwtSettings["Issuer"],
+        ValidIssuer = jwtSettingsSection["Issuer"],
         ValidateAudience = true,
-        ValidAudience = jwtSettings["Audience"],
+        ValidAudience = jwtSettingsSection["Audience"],
         ValidateLifetime = true,
         ClockSkew = TimeSpan.Zero
     };
@@ -92,34 +91,22 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
-builder.Services.AddStackExchangeRedisCache(options =>
-{
-    options.Configuration = builder.Configuration.GetConnectionString("Redis");
-});
-
 builder.Services.AddMemoryCache();
-
-builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
-{
-    var config = builder.Configuration.GetConnectionString("Redis");
-    return ConnectionMultiplexer.Connect(config ?? "localhost:6379");
-});
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAddressRepository, AddressRepository>();
 builder.Services.AddScoped<IComicRepository, ComicRepository>();
 builder.Services.AddScoped<IComicTypeRepository, ComicTypeRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-builder.Services.Decorate<IComicRepository, CachedComicRepository>();
-builder.Services.Decorate<IComicTypeRepository, CachedComicTypeRepository>();
-builder.Services.Decorate<IUserRepository, CachedUserRepository>();
-builder.Services.Decorate<IAddressRepository, CachedAddressRepository>();
+
 builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext>());
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEncryptionService, KmsEncryptionService>();
+builder.Services.AddScoped<ISensitiveDataService, SensitiveDataService>();
 builder.Services.AddScoped<IComicService, ComicService>();
 builder.Services.AddScoped<IComicTypeService, ComicTypeService>();
+builder.Services.AddScoped<IProfileService, ProfileService>();
 builder.Services.AddHostedService<RefreshTokenCleanupService>();
 
 // Rate Limiting — proteção contra abuso (OWASP A04, A07)
@@ -145,6 +132,15 @@ builder.Services.AddRateLimiter(options =>
     {
         var isTesting = builder.Environment.IsEnvironment("Testing");
         config.PermitLimit = isTesting ? 1000 : 100;
+        config.Window = TimeSpan.FromMinutes(1);
+        config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+        config.QueueLimit = 0;
+    });
+
+    options.AddFixedWindowLimiter("Strict", config =>
+    {
+        var isTesting = builder.Environment.IsEnvironment("Testing");
+        config.PermitLimit = isTesting ? 1000 : 5;
         config.Window = TimeSpan.FromMinutes(1);
         config.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
         config.QueueLimit = 0;
@@ -179,8 +175,8 @@ builder.Services.AddCors(options =>
 builder.Logging.Services.AddSingleton<ILoggerProvider>(sp =>
 {
     var accessor = sp.GetRequiredService<IHttpContextAccessor>();
-    return new FileLoggerProvider(
-        Microsoft.Extensions.Options.Options.Create(new FileLoggerConfiguration
+    return new FirstWebApi.Infrastructure.Logging.FileLoggerProvider(
+        Microsoft.Extensions.Options.Options.Create(new FirstWebApi.Infrastructure.Logging.FileLoggerConfiguration
         {
             Path = builder.Configuration.GetValue<string>("Logging:File:Path") ?? "logs/app-.log",
             Format = builder.Configuration.GetValue<string>("Logging:File:Format") ?? "Json"
@@ -191,33 +187,10 @@ builder.Logging.Services.AddSingleton<ILoggerProvider>(sp =>
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"))
-{
-    using (var scope = app.Services.CreateScope())
-    {
-        var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole<Guid>>>();
-
-        dbContext.Database.Migrate();
-
-        if (!await roleManager.RoleExistsAsync("User"))
-            await roleManager.CreateAsync(new IdentityRole<Guid>("User"));
-        if (!await roleManager.RoleExistsAsync("Admin"))
-            await roleManager.CreateAsync(new IdentityRole<Guid>("Admin"));
-    }
-}
+    await app.MigrateAndSeedAsync();
 
 app.UseMiddleware<ExceptionMiddleware>();
-
-// Security Headers (OWASP A05)
-app.Use(async (context, next) =>
-{
-    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
-    context.Response.Headers["X-Frame-Options"] = "DENY";
-    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
-    context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
-    context.Response.Headers["Content-Security-Policy"] = "default-src 'none'";
-    await next();
-});
+app.UseMiddleware<SecurityHeadersMiddleware>();
 
 // HTTPS redirection em produção (OWASP A05)
 if (!app.Environment.IsDevelopment())

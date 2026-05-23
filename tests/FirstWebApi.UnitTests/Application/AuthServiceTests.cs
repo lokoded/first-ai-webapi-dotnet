@@ -1,5 +1,6 @@
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
+using FirstWebApi.Application.Exceptions;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Application.Services;
 using FirstWebApi.Domain.Entities;
@@ -16,10 +17,9 @@ public class AuthServiceTests
     private readonly Mock<UserManager<User>> _userManagerMock;
     private readonly Mock<IUserRepository> _userRepoMock;
     private readonly Mock<ITokenService> _tokenServiceMock;
-    private readonly Mock<IEncryptionService> _encryptionMock;
+    private readonly Mock<ISensitiveDataService> _sensitiveDataMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<AuthService>> _loggerMock;
-    private readonly Mock<IAddressRepository> _addressRepoMock;
     private readonly Mock<IRefreshTokenRepository> _refreshTokenRepoMock;
     private readonly AuthService _authService;
 
@@ -31,27 +31,25 @@ public class AuthServiceTests
         _tokenServiceMock = new Mock<ITokenService>();
         _tokenServiceMock.Setup(t => t.GenerateRefreshToken())
             .Returns(("fake-refresh-token", "fake-hash"));
-        _encryptionMock = new Mock<IEncryptionService>();
+        _sensitiveDataMock = new Mock<ISensitiveDataService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<AuthService>>();
-        _addressRepoMock = new Mock<IAddressRepository>();
         _refreshTokenRepoMock = new Mock<IRefreshTokenRepository>();
 
         _authService = new AuthService(
             _userManagerMock.Object,
             _userRepoMock.Object,
             _tokenServiceMock.Object,
-            _encryptionMock.Object,
+            _sensitiveDataMock.Object,
             _unitOfWorkMock.Object,
             _loggerMock.Object,
-            _addressRepoMock.Object,
             _refreshTokenRepoMock.Object);
     }
 
     [Fact]
     public async Task RegisterAsync_WithValidData_ShouldReturnToken()
     {
-        _userRepoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>()))
+        _userRepoMock.Setup(r => r.GetByEmailAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync((User?)null);
 
         _userManagerMock.Setup(m => m.CreateAsync(It.IsAny<User>(), It.IsAny<string>()))
@@ -63,7 +61,7 @@ public class AuthServiceTests
         _userManagerMock.Setup(m => m.GetRolesAsync(It.IsAny<User>()))
             .ReturnsAsync(["User"]);
 
-        _userRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
+        _userRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new User("João", "joao_123", "joao@email.com"));
 
         _tokenServiceMock.Setup(t => t.GenerateToken(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<IList<string>>()))
@@ -101,7 +99,7 @@ public class AuthServiceTests
         };
 
         Func<Task> act = () => _authService.RegisterAsync(request);
-        await act.Should().ThrowAsync<InvalidOperationException>()
+        await act.Should().ThrowAsync<ConflictException>()
             .WithMessage("Email já cadastrado.");
     }
 
@@ -110,7 +108,7 @@ public class AuthServiceTests
     {
         var user = new User("João", "joao_123", "joao@email.com");
 
-        _userRepoMock.Setup(r => r.GetByEmailAsync("joao@email.com"))
+        _userRepoMock.Setup(r => r.GetByEmailAsync("joao@email.com", It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
         _userManagerMock.Setup(m => m.CheckPasswordAsync(user, "SenhaForte123"))
@@ -139,7 +137,7 @@ public class AuthServiceTests
     {
         var user = new User("João", "joao_123", "joao@email.com");
 
-        _userRepoMock.Setup(r => r.GetByEmailAsync("joao@email.com"))
+        _userRepoMock.Setup(r => r.GetByEmailAsync("joao@email.com", It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
 
         _userManagerMock.Setup(m => m.CheckPasswordAsync(user, It.IsAny<string>()))
@@ -152,7 +150,7 @@ public class AuthServiceTests
         };
 
         Func<Task> act = () => _authService.LoginAsync(request);
-        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+        await act.Should().ThrowAsync<UnauthorizedException>()
             .WithMessage("Email ou senha inválidos.");
     }
 
@@ -164,9 +162,9 @@ public class AuthServiceTests
 
         _tokenServiceMock.Setup(t => t.HashToken(It.IsAny<string>()))
             .Returns("token-hash");
-        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash"))
+        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash", It.IsAny<CancellationToken>()))
             .ReturnsAsync(storedToken);
-        _userRepoMock.Setup(r => r.GetByIdAsync(user.Id))
+        _userRepoMock.Setup(r => r.GetByIdAsync(user.Id, It.IsAny<CancellationToken>()))
             .ReturnsAsync(user);
         _tokenServiceMock.Setup(t => t.GenerateRefreshToken())
             .Returns(("new-refresh-token", "new-hash"));
@@ -174,7 +172,7 @@ public class AuthServiceTests
             .Returns("fake-jwt-token");
         _userManagerMock.Setup(m => m.GetRolesAsync(It.IsAny<User>()))
             .ReturnsAsync(["User"]);
-        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(1);
+        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         var result = await _authService.RefreshTokenAsync("valid-refresh-token");
 
@@ -188,11 +186,11 @@ public class AuthServiceTests
     {
         _tokenServiceMock.Setup(t => t.HashToken(It.IsAny<string>()))
             .Returns("invalid-hash");
-        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("invalid-hash"))
+        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("invalid-hash", It.IsAny<CancellationToken>()))
             .ReturnsAsync((RefreshToken?)null);
 
         Func<Task> act = () => _authService.RefreshTokenAsync("invalid-token");
-        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+        await act.Should().ThrowAsync<UnauthorizedException>()
             .WithMessage("Refresh token inválido ou expirado.");
     }
 
@@ -203,11 +201,11 @@ public class AuthServiceTests
 
         _tokenServiceMock.Setup(t => t.HashToken(It.IsAny<string>()))
             .Returns("token-hash");
-        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash"))
+        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash", It.IsAny<CancellationToken>()))
             .ReturnsAsync(storedToken);
 
         Func<Task> act = () => _authService.RefreshTokenAsync("expired-token");
-        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+        await act.Should().ThrowAsync<UnauthorizedException>()
             .WithMessage("Refresh token inválido ou expirado.");
     }
 
@@ -219,14 +217,14 @@ public class AuthServiceTests
 
         _tokenServiceMock.Setup(t => t.HashToken(It.IsAny<string>()))
             .Returns("token-hash");
-        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash"))
+        _refreshTokenRepoMock.Setup(r => r.GetByTokenHashAsync("token-hash", It.IsAny<CancellationToken>()))
             .ReturnsAsync(storedToken);
-        _refreshTokenRepoMock.Setup(r => r.GetActiveByUserIdAsync(It.IsAny<Guid>()))
+        _refreshTokenRepoMock.Setup(r => r.GetActiveByUserIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
-        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(1);
+        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         Func<Task> act = () => _authService.RefreshTokenAsync("revoked-token");
-        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+        await act.Should().ThrowAsync<UnauthorizedException>()
             .WithMessage("Refresh token inválido ou expirado.");
     }
 
@@ -237,7 +235,7 @@ public class AuthServiceTests
         var token1 = new RefreshToken(userId, "hash1", DateTime.UtcNow.AddDays(7));
         var token2 = new RefreshToken(userId, "hash2", DateTime.UtcNow.AddDays(7));
 
-        _refreshTokenRepoMock.Setup(r => r.GetActiveByUserIdAsync(userId))
+        _refreshTokenRepoMock.Setup(r => r.GetActiveByUserIdAsync(userId, It.IsAny<CancellationToken>()))
             .ReturnsAsync([token1, token2]);
         _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(2);
 
@@ -245,37 +243,9 @@ public class AuthServiceTests
 
         token1.IsRevoked.Should().BeTrue();
         token2.IsRevoked.Should().BeTrue();
-        _refreshTokenRepoMock.Verify(r => r.Update(token1), Times.Once);
-        _refreshTokenRepoMock.Verify(r => r.Update(token2), Times.Once);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(default), Times.Once);
+        _refreshTokenRepoMock.Verify(r => r.UpdateAsync(token1, It.IsAny<CancellationToken>()), Times.Once);
+        _refreshTokenRepoMock.Verify(r => r.UpdateAsync(token2, It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    [Fact]
-    public async Task GetProfileAsync_WithExistingUser_ShouldReturnProfile()
-    {
-        var userId = Guid.NewGuid();
-        var user = new User("João", "joao_123", "joao@email.com");
-
-        _userRepoMock.Setup(r => r.GetByIdAsync(userId))
-            .ReturnsAsync(user);
-        _userManagerMock.Setup(m => m.GetRolesAsync(user))
-            .ReturnsAsync(["User"]);
-
-        var result = await _authService.GetProfileAsync(userId);
-
-        result.Should().NotBeNull();
-        result.Nome.Should().Be("João");
-        result.Email.Should().Be("joao@email.com");
-    }
-
-    [Fact]
-    public async Task GetProfileAsync_WithNonExistentUser_ShouldThrowException()
-    {
-        _userRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync((User?)null);
-
-        Func<Task> act = () => _authService.GetProfileAsync(Guid.NewGuid());
-        await act.Should().ThrowAsync<KeyNotFoundException>()
-            .WithMessage("Usuário não encontrado.");
-    }
 }

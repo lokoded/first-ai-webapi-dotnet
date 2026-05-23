@@ -49,6 +49,8 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+USER appuser
+
 # Copia os binários publicados do estágio "build"
 COPY --from=build /app/publish .
 

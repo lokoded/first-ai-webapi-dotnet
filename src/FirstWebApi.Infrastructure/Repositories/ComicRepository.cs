@@ -5,62 +5,43 @@ using Microsoft.EntityFrameworkCore;
 
 namespace FirstWebApi.Infrastructure.Repositories;
 
-public class ComicRepository : IComicRepository
+public class ComicRepository(AppDbContext context) : IComicRepository
 {
-    private readonly AppDbContext _context;
 
-    public ComicRepository(AppDbContext context)
+    public async Task<(List<Comic> Items, int TotalCount)> GetPaginatedByUserIdAsync(Guid userId, int page, int pageSize, CancellationToken cancellationToken = default)
     {
-        _context = context;
-    }
-
-    public async Task<List<Comic>> GetByUserIdAsync(Guid userId)
-    {
-        return await _context.Comics
-            .Include(c => c.ComicType)
-            .Where(c => c.UserId == userId)
-            .ToListAsync();
-    }
-
-    public async Task<(List<Comic> Items, int TotalCount)> GetPaginatedByUserIdAsync(Guid userId, int page, int pageSize)
-    {
-        var query = _context.Comics
+        var query = context.Comics
             .Include(c => c.ComicType)
             .Where(c => c.UserId == userId);
 
-        var totalCount = await query.CountAsync();
+        var totalCount = await query.CountAsync(cancellationToken);
 
         var items = await query
             .OrderByDescending(c => c.CreatedAt)
             .Skip((page - 1) * pageSize)
             .Take(pageSize)
             .AsNoTracking()
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         return (items, totalCount);
     }
 
-    public async Task<Comic?> GetByIdAsync(Guid id)
+    public async Task<Comic?> GetByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
-        return await _context.Comics
+        return await context.Comics
             .Include(c => c.ComicType)
-            .FirstOrDefaultAsync(c => c.Id == id);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
     }
 
-    public async Task AddAsync(Comic comic)
+    public async Task AddAsync(Comic comic, CancellationToken cancellationToken = default)
     {
-        await _context.Comics.AddAsync(comic);
+        await context.Comics.AddAsync(comic, cancellationToken);
     }
 
-    public Task UpdateAsync(Comic comic)
+    public Task DeleteAsync(Comic comic, CancellationToken cancellationToken = default)
     {
-        _context.Comics.Update(comic);
-        return Task.CompletedTask;
-    }
-
-    public Task DeleteAsync(Comic comic)
-    {
-        _context.Comics.Remove(comic);
+        context.Comics.Remove(comic);
         return Task.CompletedTask;
     }
 }

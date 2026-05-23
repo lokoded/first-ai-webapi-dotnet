@@ -4,7 +4,7 @@ on:
   schedule:
     - cron: '0 6 * * 1'  # toda segunda 06:00 UTC
   push:
-    branches: [main]
+    branches: [develop, main]
 
 jobs:
   audit:

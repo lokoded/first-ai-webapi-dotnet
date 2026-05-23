@@ -16,6 +16,9 @@ public class ComicServiceTests
     private readonly Guid _userId = Guid.NewGuid();
     private readonly Guid _comicTypeId = Guid.NewGuid();
 
+    private Comic CreateComic(string titulo = "Batman", Guid? userId = null, Guid? comicTypeId = null) =>
+        new(titulo, $"https://exemplo.com/{titulo.ToLower().Replace(' ', '-')}", userId ?? _userId, comicTypeId ?? _comicTypeId);
+
     public ComicServiceTests()
     {
         _comicRepoMock = new Mock<IComicRepository>();
@@ -29,26 +32,25 @@ public class ComicServiceTests
     {
         var comics = new List<Comic>
         {
-            new("Batman", "https://exemplo.com/batman", _userId, _comicTypeId),
-            new("Superman", "https://exemplo.com/superman", _userId, _comicTypeId)
+            CreateComic(),
+            CreateComic("Superman")
         };
 
-        _comicRepoMock.Setup(r => r.GetPaginatedByUserIdAsync(_userId, 1, 20))
+        _comicRepoMock.Setup(r => r.GetPaginatedByUserIdAsync(_userId, 1, 20, It.IsAny<CancellationToken>()))
             .ReturnsAsync((comics, comics.Count));
 
         var result = await _comicService.GetAllAsync(_userId);
 
-        result.Items.Should().HaveCount(2);
-        result.TotalCount.Should().Be(2);
-        result.Items[0].Titulo.Should().Be("Batman");
-        result.Items[1].Titulo.Should().Be("Superman");
+        result.Data.Should().HaveCount(2);
+        result.Data[0].Titulo.Should().Be("Batman");
+        result.Data[1].Titulo.Should().Be("Superman");
     }
 
     [Fact]
     public async Task GetByIdAsync_WithUserComic_ShouldReturnComic()
     {
-        var comic = new Comic("Batman", "https://exemplo.com/batman", _userId, _comicTypeId);
-        _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id)).ReturnsAsync(comic);
+        var comic = CreateComic();
+        _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id, It.IsAny<CancellationToken>())).ReturnsAsync(comic);
 
         var result = await _comicService.GetByIdAsync(comic.Id, _userId);
 
@@ -60,8 +62,8 @@ public class ComicServiceTests
     public async Task GetByIdAsync_WithOtherUserComic_ShouldReturnNull()
     {
         var outroUserId = Guid.NewGuid();
-        var comic = new Comic("Batman", "https://exemplo.com/batman", outroUserId, _comicTypeId);
-        _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id)).ReturnsAsync(comic);
+        var comic = CreateComic(userId: outroUserId);
+        _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id, It.IsAny<CancellationToken>())).ReturnsAsync(comic);
 
         var result = await _comicService.GetByIdAsync(comic.Id, _userId);
 
@@ -78,31 +80,28 @@ public class ComicServiceTests
             ComicTypeId = _comicTypeId
         };
 
-        _comicTypeRepoMock.Setup(r => r.GetByIdAsync(_comicTypeId))
+        _comicTypeRepoMock.Setup(r => r.GetByIdAsync(_comicTypeId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(new ComicType("HQ"));
 
         Comic? captured = null;
-        _comicRepoMock.Setup(r => r.AddAsync(It.IsAny<Comic>()))
-            .Callback<Comic>(c => captured = c)
+        _comicRepoMock.Setup(r => r.AddAsync(It.IsAny<Comic>(), It.IsAny<CancellationToken>()))
+            .Callback<Comic, CancellationToken>((c, _) => captured = c)
             .Returns(Task.CompletedTask);
 
-        _comicRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>()))
-            .ReturnsAsync((Guid id) => captured);
-
-        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(1);
+        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         var result = await _comicService.CreateAsync(request, _userId);
 
         result.Should().NotBeNull();
         result.Titulo.Should().Be("Batman");
-        _comicRepoMock.Verify(r => r.AddAsync(It.IsAny<Comic>()), Times.Once);
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(default), Times.Once);
+        _comicRepoMock.Verify(r => r.AddAsync(It.IsAny<Comic>(), It.IsAny<CancellationToken>()), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task UpdateAsync_WithUserComic_ShouldUpdateAndReturn()
     {
-        var comic = new Comic("Batman", "https://exemplo.com/batman", _userId, _comicTypeId);
+        var comic = CreateComic();
         var request = new ComicRequest
         {
             Titulo = "Batman 2024",
@@ -110,21 +109,21 @@ public class ComicServiceTests
             ComicTypeId = _comicTypeId
         };
 
-        _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id)).ReturnsAsync(comic);
-        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(1);
+        _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id, It.IsAny<CancellationToken>())).ReturnsAsync(comic);
+        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         var result = await _comicService.UpdateAsync(comic.Id, request, _userId);
 
         result.Should().NotBeNull();
         result!.Titulo.Should().Be("Batman 2024");
-        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(default), Times.Once);
+        _unitOfWorkMock.Verify(u => u.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task UpdateAsync_WithOtherUserComic_ShouldReturnNull()
     {
         var outroUserId = Guid.NewGuid();
-        var comic = new Comic("Batman", "https://exemplo.com/batman", outroUserId, _comicTypeId);
+        var comic = CreateComic(userId: outroUserId);
         var request = new ComicRequest
         {
             Titulo = "Batman 2024",
@@ -132,7 +131,7 @@ public class ComicServiceTests
             ComicTypeId = _comicTypeId
         };
 
-        _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id)).ReturnsAsync(comic);
+        _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id, It.IsAny<CancellationToken>())).ReturnsAsync(comic);
 
         var result = await _comicService.UpdateAsync(comic.Id, request, _userId);
 
@@ -142,33 +141,33 @@ public class ComicServiceTests
     [Fact]
     public async Task DeleteAsync_WithUserComic_ShouldRemoveAndReturnTrue()
     {
-        var comic = new Comic("Batman", "https://exemplo.com/batman", _userId, _comicTypeId);
-        _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id)).ReturnsAsync(comic);
-        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(1);
+        var comic = CreateComic();
+        _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id, It.IsAny<CancellationToken>())).ReturnsAsync(comic);
+        _unitOfWorkMock.Setup(u => u.SaveChangesAsync(It.IsAny<CancellationToken>())).ReturnsAsync(1);
 
         var result = await _comicService.DeleteAsync(comic.Id, _userId);
 
         result.Should().BeTrue();
-        _comicRepoMock.Verify(r => r.DeleteAsync(comic), Times.Once);
+        _comicRepoMock.Verify(r => r.DeleteAsync(comic, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
     public async Task DeleteAsync_WithOtherUserComic_ShouldReturnFalse()
     {
         var outroUserId = Guid.NewGuid();
-        var comic = new Comic("Batman", "https://exemplo.com/batman", outroUserId, _comicTypeId);
-        _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id)).ReturnsAsync(comic);
+        var comic = CreateComic(userId: outroUserId);
+        _comicRepoMock.Setup(r => r.GetByIdAsync(comic.Id, It.IsAny<CancellationToken>())).ReturnsAsync(comic);
 
         var result = await _comicService.DeleteAsync(comic.Id, _userId);
 
         result.Should().BeFalse();
-        _comicRepoMock.Verify(r => r.DeleteAsync(It.IsAny<Comic>()), Times.Never);
+        _comicRepoMock.Verify(r => r.DeleteAsync(It.IsAny<Comic>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
     public async Task DeleteAsync_WithNonExistentComic_ShouldReturnFalse()
     {
-        _comicRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>())).ReturnsAsync((Comic?)null);
+        _comicRepoMock.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync((Comic?)null);
 
         var result = await _comicService.DeleteAsync(Guid.NewGuid(), _userId);
 

@@ -2,5 +2,5 @@ namespace FirstWebApi.Application.DTOs.Request;
 
 public class FullProfileRequest
 {
-    public string Senha { get; set; } = string.Empty;
+    public string Senha { get; init; } = string.Empty;
 }

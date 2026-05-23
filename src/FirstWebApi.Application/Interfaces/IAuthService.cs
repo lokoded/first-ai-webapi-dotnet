@@ -5,10 +5,8 @@ namespace FirstWebApi.Application.Interfaces;
 
 public interface IAuthService
 {
-    Task<AuthResponse> RegisterAsync(RegisterRequest request);
-    Task<AuthResponse> LoginAsync(LoginRequest request);
-    Task<AuthResponse> RefreshTokenAsync(string refreshToken);
-    Task RevokeRefreshTokensAsync(Guid userId);
-    Task<UserResponse> GetProfileAsync(Guid userId);
-    Task<UserResponse> GetFullProfileAsync(Guid userId, string senha);
+    Task<AuthResponse> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default);
+    Task<AuthResponse> LoginAsync(LoginRequest request, CancellationToken cancellationToken = default);
+    Task<AuthResponse> RefreshTokenAsync(string refreshToken, CancellationToken cancellationToken = default);
+    Task RevokeRefreshTokensAsync(Guid userId, CancellationToken cancellationToken = default);
 }

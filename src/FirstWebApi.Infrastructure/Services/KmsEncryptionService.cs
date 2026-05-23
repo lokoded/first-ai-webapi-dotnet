@@ -3,29 +3,31 @@ using Amazon;
 using Amazon.KeyManagementService;
 using Amazon.KeyManagementService.Model;
 using FirstWebApi.Application.Interfaces;
+using FirstWebApi.Domain.ValueObjects;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace FirstWebApi.Infrastructure.Services;
 
-public class KmsEncryptionService : IEncryptionService
+public class KmsEncryptionService(
+    IConfiguration configuration,
+    ILogger<KmsEncryptionService> logger,
+    IMemoryCache memoryCache,
+    IAmazonKeyManagementService? kmsClient = null) : IEncryptionService
 {
-    private readonly IAmazonKeyManagementService _kmsClient;
-    private readonly string _keyId;
-    private readonly ILogger<KmsEncryptionService> _logger;
-    private readonly IMemoryCache _cache;
+    private readonly IAmazonKeyManagementService _kmsClient = kmsClient ?? CreateKmsClient(configuration);
+    private readonly string _keyId = configuration.GetSection("Kms")["KeyId"]
+        ?? throw new InvalidOperationException("KMS KeyId não configurado.");
+    private readonly ILogger<KmsEncryptionService> _logger = logger;
+    private readonly IMemoryCache _cache = memoryCache;
     private static readonly TimeSpan CacheSlidingExpiry = TimeSpan.FromMinutes(15);
     private static readonly TimeSpan CacheAbsoluteExpiry = TimeSpan.FromHours(1);
-    private readonly Lazy<Task> _initialization;
+    private Lazy<Task>? _initialization;
 
-    public KmsEncryptionService(IConfiguration configuration, ILogger<KmsEncryptionService> logger, IMemoryCache memoryCache)
+    private static IAmazonKeyManagementService CreateKmsClient(IConfiguration configuration)
     {
-        _logger = logger;
-        _cache = memoryCache;
         var kmsConfig = configuration.GetSection("Kms");
-        _keyId = kmsConfig["KeyId"] ?? throw new InvalidOperationException("KMS KeyId não configurado.");
-
         var endpoint = kmsConfig["Endpoint"];
         var useHttp = kmsConfig.GetValue<bool>("UseHttp");
         var region = kmsConfig["Region"] ?? "us-east-1";
@@ -45,19 +47,14 @@ public class KmsEncryptionService : IEncryptionService
         }
 
         if (!string.IsNullOrEmpty(accessKey) && !string.IsNullOrEmpty(secretKey))
-        {
-            _kmsClient = new AmazonKeyManagementServiceClient(accessKey, secretKey, config);
-        }
-        else
-        {
-            _kmsClient = new AmazonKeyManagementServiceClient(config);
-        }
+            return new AmazonKeyManagementServiceClient(accessKey, secretKey, config);
 
-        _initialization = new Lazy<Task>(InitializeKeyAsync);
+        return new AmazonKeyManagementServiceClient(config);
     }
 
     private async Task EnsureInitializedAsync()
     {
+        _initialization ??= new Lazy<Task>(() => InitializeKeyAsync());
         await _initialization.Value;
     }
 
@@ -99,14 +96,14 @@ public class KmsEncryptionService : IEncryptionService
         }
     }
 
-    public async Task<(byte[] ciphertext, byte[] iv, byte[] tag, byte[] encryptedDataKey)> EncryptAsync(string plaintext)
+    public async Task<DadoProtegido> EncryptAsync(string plaintext, CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync();
         var dataKeyResponse = await _kmsClient.GenerateDataKeyAsync(new GenerateDataKeyRequest
         {
             KeyId = _keyId,
             KeySpec = DataKeySpec.AES_256
-        });
+        }, cancellationToken);
 
         var plaintextKeyBytes = dataKeyResponse.Plaintext.ToArray();
         var encryptedDataKeyBytes = dataKeyResponse.CiphertextBlob.ToArray();
@@ -119,30 +116,33 @@ public class KmsEncryptionService : IEncryptionService
         });
 
         var plaintextBytes = System.Text.Encoding.UTF8.GetBytes(plaintext);
-        var nonce = new byte[AesGcm.NonceByteSizes.MaxSize]; // 12 bytes
+        var nonce = new byte[AesGcm.NonceByteSizes.MaxSize];
         RandomNumberGenerator.Fill(nonce);
 
         var ciphertextBytes = new byte[plaintextBytes.Length];
-        var tag = new byte[AesGcm.TagByteSizes.MaxSize]; // 16 bytes
+        var tag = new byte[AesGcm.TagByteSizes.MaxSize];
 
         using var aesGcm = new AesGcm(plaintextKeyBytes, AesGcm.TagByteSizes.MaxSize);
         aesGcm.Encrypt(nonce, plaintextBytes, ciphertextBytes, tag);
 
-        return (ciphertextBytes, nonce, tag, encryptedDataKeyBytes);
+        var encrypted = new EncryptedData(ciphertextBytes, nonce, tag, encryptedDataKeyBytes);
+        return new DadoProtegido(Pack(encrypted));
     }
 
-    public async Task<string> DecryptAsync(byte[] ciphertext, byte[] iv, byte[] tag, byte[] encryptedDataKey)
+    public async Task<string> DecryptAsync(DadoProtegido data, CancellationToken cancellationToken = default)
     {
         await EnsureInitializedAsync();
-        var cacheKey = Convert.ToBase64String(encryptedDataKey);
+        var encrypted = Unpack(data.Valor);
+
+        var cacheKey = Convert.ToBase64String(encrypted.EncryptedDataKey);
 
         if (!_cache.TryGetValue(cacheKey, out byte[]? plaintextKey))
         {
             var decryptResponse = await _kmsClient.DecryptAsync(new DecryptRequest
             {
-                CiphertextBlob = new MemoryStream(encryptedDataKey),
+                CiphertextBlob = new MemoryStream(encrypted.EncryptedDataKey),
                 KeyId = _keyId
-            });
+            }, cancellationToken);
             plaintextKey = decryptResponse.Plaintext.ToArray();
             _cache.Set(cacheKey, plaintextKey, new MemoryCacheEntryOptions
             {
@@ -151,10 +151,36 @@ public class KmsEncryptionService : IEncryptionService
             });
         }
 
-        var plaintextBytes = new byte[ciphertext.Length];
+        var plaintextBytes = new byte[encrypted.Ciphertext.Length];
         using var aesGcm = new AesGcm(plaintextKey!, AesGcm.TagByteSizes.MaxSize);
-        aesGcm.Decrypt(iv, ciphertext, tag, plaintextBytes);
+        aesGcm.Decrypt(encrypted.Iv, encrypted.Ciphertext, encrypted.Tag, plaintextBytes);
 
         return System.Text.Encoding.UTF8.GetString(plaintextBytes);
+    }
+
+    private static byte[] Pack(EncryptedData data)
+    {
+        using var ms = new MemoryStream();
+        var bw = new BinaryWriter(ms);
+        bw.Write(data.Ciphertext.Length);
+        bw.Write(data.Ciphertext);
+        bw.Write(data.Iv.Length);
+        bw.Write(data.Iv);
+        bw.Write(data.Tag.Length);
+        bw.Write(data.Tag);
+        bw.Write(data.EncryptedDataKey.Length);
+        bw.Write(data.EncryptedDataKey);
+        return ms.ToArray();
+    }
+
+    private static EncryptedData Unpack(byte[] blob)
+    {
+        using var ms = new MemoryStream(blob);
+        var br = new BinaryReader(ms);
+        var ciphertext = br.ReadBytes(br.ReadInt32());
+        var iv = br.ReadBytes(br.ReadInt32());
+        var tag = br.ReadBytes(br.ReadInt32());
+        var encryptedDataKey = br.ReadBytes(br.ReadInt32());
+        return new EncryptedData(ciphertext, iv, tag, encryptedDataKey);
     }
 }

@@ -1,67 +1,76 @@
-using System.Security.Claims;
 using FirstWebApi.Application.DTOs.Request;
+using FirstWebApi.Application.DTOs.Response;
 using FirstWebApi.Application.Interfaces;
-using FluentValidation;
+using FirstWebApi.WebApi.Extensions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.RateLimiting;
 
 namespace FirstWebApi.WebApi.Controllers;
 
 [ApiController]
 [Route("api/auth")]
+[Authorize]
 [EnableRateLimiting("Auth")]
 public class AuthController(
-    IAuthService authService,
-    IValidator<RegisterRequest> registerValidator,
-    IValidator<LoginRequest> loginValidator,
-    IValidator<RefreshTokenRequest> refreshValidator) : ControllerBase
+    IAuthService authService) : ControllerBase
 {
     [HttpPost("register")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status409Conflict)]
+    [ProducesResponseType(StatusCodes.Status422UnprocessableEntity)]
     public async Task<IActionResult> Register([FromBody] RegisterRequest request)
     {
-        var validation = await registerValidator.ValidateAsync(request);
-        if (!validation.IsValid)
-            return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
-
-        var result = await authService.RegisterAsync(request);
-        return CreatedAtAction(nameof(Register), new { email = result.Email }, result);
+        var result = await authService.RegisterAsync(request, HttpContext.RequestAborted);
+        SetRefreshTokenCookie(result.RefreshToken);
+        return CreatedAtAction(nameof(UsersController.GetProfile), "Users", new { }, result);
     }
 
     [HttpPost("login")]
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {
-        var validation = await loginValidator.ValidateAsync(request);
-        if (!validation.IsValid)
-            return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
-
-        var result = await authService.LoginAsync(request);
+        var result = await authService.LoginAsync(request, HttpContext.RequestAborted);
+        SetRefreshTokenCookie(result.RefreshToken);
         return Ok(result);
     }
 
     [HttpPost("refresh")]
-    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request)
+    [AllowAnonymous]
+    [ProducesResponseType(typeof(AuthResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public async Task<IActionResult> Refresh()
     {
-        var validation = await refreshValidator.ValidateAsync(request);
-        if (!validation.IsValid)
-            return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
+        var refreshToken = Request.Cookies["RefreshToken"];
+        if (string.IsNullOrEmpty(refreshToken))
+            return Problem(detail: "Refresh token não encontrado.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
-        var result = await authService.RefreshTokenAsync(request.RefreshToken);
+        var result = await authService.RefreshTokenAsync(refreshToken, HttpContext.RequestAborted);
+        SetRefreshTokenCookie(result.RefreshToken);
         return Ok(result);
     }
 
     [HttpPost("revoke")]
-    [Authorize]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> Revoke()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
-            ?? User.FindFirst("sub")?.Value;
+        var userId = User.GetUserId();
+        if (userId == Guid.Empty)
+            return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
-        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
-            return Problem(detail: "Token inválido.", statusCode: 401, title: "Não autorizado");
-
-        await authService.RevokeRefreshTokensAsync(userId);
+        await authService.RevokeRefreshTokensAsync(userId, HttpContext.RequestAborted);
         return NoContent();
+    }
+
+    private void SetRefreshTokenCookie(string refreshToken)
+    {
+        var expires = DateTimeOffset.UtcNow.AddDays(7).ToString("R");
+        var secure = Request.IsHttps ? "; Secure" : "";
+        Response.Headers.Append("Set-Cookie", $"RefreshToken={refreshToken}; HttpOnly; SameSite=Strict; Expires={expires}{secure}");
     }
 }

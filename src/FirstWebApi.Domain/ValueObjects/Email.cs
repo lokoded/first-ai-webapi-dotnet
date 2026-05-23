@@ -19,5 +19,5 @@ public readonly partial record struct Email
     [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$")]
     private static partial Regex EmailRegex();
 
-    public override string ToString() => Endereco;
+    public override string ToString() => Endereco ?? throw new InvalidOperationException("Email não inicializado.");
 }

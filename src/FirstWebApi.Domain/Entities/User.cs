@@ -1,3 +1,4 @@
+using FirstWebApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Identity;
 
 namespace FirstWebApi.Domain.Entities;
@@ -6,18 +7,19 @@ public class User : IdentityUser<Guid>
 {
     public string Nome { get; private set; } = string.Empty;
 
-    public byte[]? CpfCiphertext { get; private set; }
-    public byte[]? CpfIv { get; private set; }
-    public byte[]? CpfTag { get; private set; }
-    public byte[]? CpfEncryptedDataKey { get; private set; }
-
-    public byte[]? RgCiphertext { get; private set; }
-    public byte[]? RgIv { get; private set; }
-    public byte[]? RgTag { get; private set; }
-    public byte[]? RgEncryptedDataKey { get; private set; }
+    public byte[]? CpfDados { get; private set; }
+    public byte[]? RgDados { get; private set; }
 
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; private set; }
+
+    public DadoProtegido? CpfData => CpfDados is not null
+        ? new DadoProtegido(CpfDados)
+        : null;
+
+    public DadoProtegido? RgData => RgDados is not null
+        ? new DadoProtegido(RgDados)
+        : null;
 
     protected User() { }
 
@@ -29,19 +31,9 @@ public class User : IdentityUser<Guid>
         Email = email;
     }
 
-    public void SetCpfData(byte[] ciphertext, byte[] iv, byte[] tag, byte[] encryptedDataKey)
-    {
-        CpfCiphertext = ciphertext;
-        CpfIv = iv;
-        CpfTag = tag;
-        CpfEncryptedDataKey = encryptedDataKey;
-    }
+    public void SetCpfData(DadoProtegido data)
+        => CpfDados = data.Valor;
 
-    public void SetRgData(byte[] ciphertext, byte[] iv, byte[] tag, byte[] encryptedDataKey)
-    {
-        RgCiphertext = ciphertext;
-        RgIv = iv;
-        RgTag = tag;
-        RgEncryptedDataKey = encryptedDataKey;
-    }
+    public void SetRgData(DadoProtegido data)
+        => RgDados = data.Valor;
 }

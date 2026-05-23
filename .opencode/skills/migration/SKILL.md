@@ -5,7 +5,7 @@ description: Use quando precisar criar, aplicar, reverter ou gerenciar migration
 
 ## Workflow de Migrations
 
-### 1. Criar uma nova migration
+### 1. Criar
 
 ```powershell
 dotnet ef migrations add <NomeDaMigration> `
@@ -13,7 +13,7 @@ dotnet ef migrations add <NomeDaMigration> `
   --startup-project src/FirstWebApi.WebApi
 ```
 
-- `<NomeDaMigration>` em inglês, PascalCase, descritivo (ex: `AddUserAuditFields`)
+- Nome em inglês, PascalCase, descritivo (ex: `AddUserAuditFields`)
 - Sempre verificar o código gerado em `Data/Migrations/` antes de aplicar
 
 ### 2. Reverter (antes de commitar)
@@ -36,7 +36,7 @@ dotnet ef database update `
 
 **Pré-requisito**: Docker rodando (`docker compose up -d`).
 
-### 4. Reverter banco para uma migration anterior
+### 4. Reverter banco
 
 ```powershell
 dotnet ef database update <NomeDaMigrationAnterior> `
@@ -53,9 +53,9 @@ dotnet ef migrations script --idempotent -o scripts/migration.sql `
 ```
 
 - Revisar o SQL gerado via PR antes de aplicar
-- Nunca aplicar migration automática em produção (`Migrate()` só roda em Development/Testing)
+- Nunca aplicar migration automática em produção
 
-### 6. Script de rollback entre versões
+### 6. Script de rollback
 
 ```powershell
 dotnet ef migrations script <MigrationDe> <MigrationPara> --idempotent -o scripts/rollback.sql `
@@ -63,7 +63,7 @@ dotnet ef migrations script <MigrationDe> <MigrationPara> --idempotent -o script
   --startup-project src/FirstWebApi.WebApi
 ```
 
-### 7. Listar migrations
+### 7. Listar
 
 ```powershell
 dotnet ef migrations list `
@@ -73,14 +73,14 @@ dotnet ef migrations list `
 
 ## Regras
 
-- Migration automática roda apenas em `Development`/`Testing` (via `Program.cs`)
+- Migration automática roda apenas em Development/Testing
 - Em produção: **sempre** usar script idempotente
-- Migration nova exige `DbSet` no `AppDbContext` e `IEntityTypeConfiguration` (classes separadas em `Data/Configurations/`)
-- Se adicionar coluna em entidade existente, verificar se há dados no banco que podem quebrar com `NOT NULL`
+- Migration nova exige `DbSet` no `AppDbContext` e `IEntityTypeConfiguration`
+- Se adicionar coluna NOT NULL em tabela com dados, usar valor padrão
 - Nunca editar migrations já aplicadas — criar nova migration
 
 ## Armadilhas
 
 - Docker precisa estar rodando para `database update`
 - `dotnet ef migrations remove` só remove a ÚLTIMA migration não aplicada
-- Se der conflito de merge em migrations, resolver manualmente: reverter para antes do fork, depois recriar
+- Conflito de merge em migrations: reverter para antes do fork, depois recriar

@@ -46,3 +46,7 @@ bld/
 [Oo]bj/
 [Ll]og/
 [Ll]ogs/
+
+# Test Results
+TestResults/
+*.opencover.xml

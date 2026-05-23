@@ -1,7 +1,8 @@
 # Regras do Projeto — FirstWebApi
 
 > Este arquivo é carregado no contexto do OpenCode em toda sessão.
-> Contém as regras, convenções e armadilhas que a IA deve seguir.
+> Contém as regras operacionais, convenções e armadilhas que a IA deve seguir.
+> Consulte `specs/` para as especificações detalhadas do projeto (arquitetura, segurança, API, testes, etc).
 
 ---
 
@@ -11,7 +12,7 @@
 - SOLID quando fizer sentido, **sem overengineering**
 - Nunca adicionar MediatR ou CQRS a menos que explicitamente solicitado
 - Nunca adicionar `[Produces("application/json")]` — ASP.NET Core negocia JSON como default
-- `SuppressModelStateInvalidFilter = true` em Program.cs — validação é **manual via FluentValidation**
+- Auto-validation do `[ApiController]` — FluentValidation validará os requests automaticamente
 
 ## Convenções de Código
 
@@ -21,7 +22,6 @@
 - **Preferir `var`** quando o tipo for óbvio
 - **Preferir expression-bodied members** quando for uma única expressão
 - **Preferir primary constructors** (C# 12+)
-- **Sem `[ApiController]` auto-validation** — validar manualmente com FluentValidation
 - Usar `Problem()` / `ValidationProblem()` do `ControllerBase`, nunca `BadRequest()`/`NotFound()`/`Conflict()` diretamente
 
 ## Estrutura de Pastas
@@ -43,7 +43,7 @@ tests/
 - Value Objects são `readonly struct` com validação própria (ex: `Cpf`, `Email`)
 - Entidades: `User` extends `IdentityUser<Guid>`, `Comic`, `ComicType`, `Address`
 - Repository interfaces apenas (implementação na Infrastructure)
-- `IUnitOfWork` com `Task<int> CommitAsync()`
+- `IUnitOfWork` com `Task<int> SaveChangesAsync()`
 
 ## Application
 
@@ -64,12 +64,6 @@ tests/
 
 ## WebApi / Controllers
 
-- **TODO controller** injeta `IValidator<T>` do request e valida manualmente:
-  ```csharp
-  var validation = await _validator.ValidateAsync(request);
-  if (!validation.IsValid)
-      return ValidationProblem(validation.ToDictionary());
-  ```
 - Retornar `Created()` para POST, `Ok()` para GET, `NoContent()` para PUT/DELETE
 - `[Authorize]` global no controller, não por action (exceto quando público)
 - Admin endpoints ficam em controller separado com `[Authorize(Roles = "Admin")]`
@@ -122,12 +116,19 @@ tests/
 - Se o commit falhar, reportar o erro ao usuário e não prosseguir
 - Ao marcar o **último** todo como `completed`, perguntar ao usuário: *"Deseja fazer push?"* — se sim, executar `git push`
 
-## Armadilhas Conhecidas (LEIA ANTES DE ALTERAR)
+## 🚦 Pré-condições Operacionais
 
-1. `SuppressModelStateInvalidFilter = true` — SEMPRE validar com FluentValidation manualmente
-2. `KmsEncryptionService` inicialização é lazy (`Lazy<Task>`) — primeira chamada pode ser lenta se LocalStack estiver offline
+Antes de executar comandos, verificar os pré-requisitos:
+
+- **`dotnet test` em `FirstWebApi.IntegrationTests`**: Docker deve estar rodando com os containers `sqlserver`, `redis` e `localstack` UP. Verificar com `docker compose ps`. Se não estiverem, executar `docker compose up -d` antes dos testes. O erro `SqlException: SQL Server not found` indica Docker ausente/inativo.
+
+---
+
+## ⚠️ Armadilhas Conhecidas (LEIA ANTES DE ALTERAR)
+
+1. `KmsEncryptionService` inicialização é lazy (`Lazy<Task>`) — primeira chamada pode ser lenta se LocalStack estiver offline
 3. Paginação do `ComicService.GetAllAsync` usa OFFSET/FETCH no banco — NÃO é mais em memória
-4. `Tag` no AES-GCM tem 16 bytes — diferente do CBC antigo (Array.Empty)
+4. `DadoProtegido` é um blob opaco — NUNCA acessar `Valor` diretamente no Domain ou Application. A responsabilidade de serialização é exclusiva da Infrastructure (KmsEncryptionService + ValueConverter). Se o formato interno precisar mudar, atualizar ambos em conjunto.
 5. Migration automática só roda em Development/Testing — em produção usar script idempotente
 6. `User.Role` removido — autorização usa exclusivamente `ClaimTypes.Role` do Identity
 7. Integration tests compartilham banco `FirstWebApiDb_Test` — rodar em sequência (Collection)

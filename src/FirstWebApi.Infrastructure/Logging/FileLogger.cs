@@ -1,9 +1,10 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace FirstWebApi.WebApi.Logging;
+namespace FirstWebApi.Infrastructure.Logging;
 
 public class FileLoggerConfiguration
 {
@@ -38,21 +39,12 @@ public class FileLoggerProvider : ILoggerProvider
     public void Dispose() => _loggers.Clear();
 }
 
-public class FileLogger : ILogger
+public class FileLogger(string categoryName, string filePath, string format, IHttpContextAccessor httpContextAccessor) : ILogger
 {
-    private readonly string _categoryName;
-    private readonly string _filePath;
-    private readonly string _format;
-    private readonly IHttpContextAccessor _httpContextAccessor;
-    private readonly object _lock = new();
+    private static readonly HashSet<string> SensitiveKeyTerms =
+        ["cpf", "rg", "senha", "password", "token", "secretkey", "accesskey"];
 
-    public FileLogger(string categoryName, string filePath, string format, IHttpContextAccessor httpContextAccessor)
-    {
-        _categoryName = categoryName;
-        _filePath = filePath;
-        _format = format;
-        _httpContextAccessor = httpContextAccessor;
-    }
+    private readonly object _lock = new();
 
     public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
@@ -63,12 +55,20 @@ public class FileLogger : ILogger
     {
         if (!IsEnabled(logLevel)) return;
 
+        var message = formatter(state, exception);
+
+        if (SensitiveKeyTerms.Any(term =>
+                message.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0))
+        {
+            message = "***REDACTED***";
+        }
+
         var logRecord = new Dictionary<string, object?>
         {
             ["Timestamp"] = DateTime.UtcNow.ToString("O"),
             ["Level"] = logLevel.ToString(),
-            ["Category"] = _categoryName,
-            ["Message"] = formatter(state, exception)
+            ["Category"] = categoryName,
+            ["Message"] = message
         };
 
         if (exception != null)
@@ -77,7 +77,7 @@ public class FileLogger : ILogger
             logRecord["ExceptionMessage"] = exception.Message;
         }
 
-        var traceId = _httpContextAccessor.HttpContext?.TraceIdentifier;
+        var traceId = httpContextAccessor.HttpContext?.TraceIdentifier;
         if (!string.IsNullOrEmpty(traceId))
             logRecord["TraceId"] = traceId;
 
@@ -85,27 +85,33 @@ public class FileLogger : ILogger
         {
             foreach (var kv in structure)
             {
-                if (kv.Key != "{OriginalFormat}")
+                if (kv.Key == "{OriginalFormat}") continue;
+
+                if (SensitiveKeyTerms.Any(term =>
+                        kv.Key.IndexOf(term, StringComparison.OrdinalIgnoreCase) >= 0))
                 {
-                    try
-                    {
-                        _ = JsonSerializer.Serialize(kv.Value);
-                        logRecord[kv.Key] = kv.Value;
-                    }
-                    catch
-                    {
-                        logRecord[kv.Key] = kv.Value?.ToString();
-                    }
+                    logRecord[kv.Key] = "***REDACTED***";
+                    continue;
+                }
+
+                try
+                {
+                    _ = JsonSerializer.Serialize(kv.Value);
+                    logRecord[kv.Key] = kv.Value;
+                }
+                catch
+                {
+                    logRecord[kv.Key] = kv.Value?.ToString();
                 }
             }
         }
 
-        var fileName = _filePath.Replace(".log", $"-{DateTime.UtcNow:yyyy-MM-dd}.log");
+        var fileName = filePath.Replace(".log", $"-{DateTime.UtcNow:yyyy-MM-dd}.log");
 
         string logLine;
         try
         {
-            logLine = _format == "Json"
+            logLine = format == "Json"
                 ? JsonSerializer.Serialize(logRecord)
                 : $"[{logRecord["Timestamp"]}] {logRecord["Level"]}: {logRecord["Message"]}";
         }

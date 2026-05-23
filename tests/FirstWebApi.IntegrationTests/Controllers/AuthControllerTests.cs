@@ -1,22 +1,14 @@
-using System.Text;
 using System.Text.Json;
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
-using Microsoft.AspNetCore.Mvc.Testing;
 using FluentAssertions;
 
 namespace FirstWebApi.IntegrationTests.Controllers;
 
-[Collection("Database")]
-public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
+public class AuthControllerTests(FirstWebApiFactory factory) : IntegrationTestBase(factory)
 {
-    private readonly HttpClient _client;
-
-    public AuthControllerTests(FirstWebApiFactory factory)
-    {
-        _client = factory.CreateClient();
-    }
-
+    private readonly HttpClient _cookieClient = new(factory.Server.CreateHandler())
+        { BaseAddress = new Uri("http://localhost") };
 
     [Fact]
     public async Task PostRegister_WithValidData_ShouldReturn201()
@@ -30,12 +22,9 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Cpf = "529.982.247-25"
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8,
-            "application/json");
+        var content = JsonContent(request);
 
-        var response = await _client.PostAsync("/api/auth/register", content);
+        var response = await Client.PostAsync("/api/auth/register", content);
 
         var body = await response.Content.ReadAsStringAsync();
 
@@ -46,6 +35,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
         authResponse.Should().NotBeNull();
         authResponse!.Token.Should().NotBeNullOrEmpty();
         authResponse.Email.Should().Be(request.Email);
+
     }
 
     [Fact]
@@ -62,13 +52,10 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Cpf = "529.982.247-25"
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8,
-            "application/json");
+        var content = JsonContent(request);
 
-        await _client.PostAsync("/api/auth/register", content);
-        var response = await _client.PostAsync("/api/auth/register", content);
+        await Client.PostAsync("/api/auth/register", content);
+        var response = await Client.PostAsync("/api/auth/register", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.Conflict);
     }
@@ -87,11 +74,9 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Cpf = "529.982.247-25"
         };
 
-        var registerContent = new StringContent(
-            JsonSerializer.Serialize(register),
-            Encoding.UTF8, "application/json");
+        var registerContent = JsonContent(register);
 
-        await _client.PostAsync("/api/auth/register", registerContent);
+        await Client.PostAsync("/api/auth/register", registerContent);
 
         var login = new LoginRequest
         {
@@ -99,11 +84,9 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Senha = "SenhaForte123"
         };
 
-        var loginContent = new StringContent(
-            JsonSerializer.Serialize(login),
-            Encoding.UTF8, "application/json");
+        var loginContent = JsonContent(login);
 
-        var response = await _client.PostAsync("/api/auth/login", loginContent);
+        var response = await Client.PostAsync("/api/auth/login", loginContent);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
 
@@ -124,94 +107,40 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Senha = "SenhaErrada"
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(login),
-            Encoding.UTF8, "application/json");
+        var content = JsonContent(login);
 
-        var response = await _client.PostAsync("/api/auth/login", content);
+        var response = await Client.PostAsync("/api/auth/login", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
     }
 
-    [Fact]
-    public async Task PostRegister_WithInvalidCpf_ShouldReturn400()
+    public static IEnumerable<object[]> InvalidRegisterData()
     {
-        var request = new RegisterRequest
-        {
-            Nome = "CPF Inválido",
-            UserName = $"cpf_invalido_{Guid.NewGuid():N}"[..20],
-            Email = $"cpf_invalido_{Guid.NewGuid()}@email.com",
-            Senha = "SenhaForte123",
-            Cpf = "123.456.789-00"
-        };
-
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
-
-        var response = await _client.PostAsync("/api/auth/register", content);
-
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
+        var id = Guid.NewGuid();
+        yield return ["CPF inválido", $"cpf_{id:N}"[..20], $"cpf_{id}@email.com", "SenhaForte123", "123.456.789-00"];
+        var id2 = Guid.NewGuid();
+        yield return ["Senha fraca", $"senha_{id2:N}"[..20], $"senha_{id2}@email.com", "fraca", "529.982.247-25"];
+        var id3 = Guid.NewGuid();
+        yield return ["Email inválido", $"email_{id3:N}"[..20], "invalido", "SenhaForte123", "529.982.247-25"];
+        var id4 = Guid.NewGuid();
+        yield return new object[] { "Sem CPF/RG", $"sem_cpf_{id4:N}"[..20], $"sem_cpf_{id4}@email.com", "SenhaForte123", null! };
     }
 
-    [Fact]
-    public async Task PostRegister_WithWeakPassword_ShouldReturn400()
+    [Theory]
+    [MemberData(nameof(InvalidRegisterData))]
+    public async Task PostRegister_WithInvalidData_ShouldReturn400(string nome, string userName, string email, string senha, string? cpf)
     {
         var request = new RegisterRequest
         {
-            Nome = "Senha Fraca",
-            UserName = $"senha_fraca_{Guid.NewGuid():N}"[..20],
-            Email = $"senha_fraca_{Guid.NewGuid()}@email.com",
-            Senha = "fraca",
-            Cpf = "529.982.247-25"
+            Nome = nome,
+            UserName = userName,
+            Email = email,
+            Senha = senha,
+            Cpf = cpf
         };
 
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
-
-        var response = await _client.PostAsync("/api/auth/register", content);
-
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
-    public async Task PostRegister_WithInvalidEmail_ShouldReturn400()
-    {
-        var request = new RegisterRequest
-        {
-            Nome = "Email Inválido",
-            UserName = $"email_invalido_{Guid.NewGuid():N}"[..20],
-            Email = "invalido",
-            Senha = "SenhaForte123",
-            Cpf = "529.982.247-25"
-        };
-
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
-
-        var response = await _client.PostAsync("/api/auth/register", content);
-
-        response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
-    }
-
-    [Fact]
-    public async Task PostRegister_WithoutCpfAndRg_ShouldReturn400()
-    {
-        var request = new RegisterRequest
-        {
-            Nome = "Sem CPF RG",
-            UserName = $"sem_cpf_rg_{Guid.NewGuid():N}"[..20],
-            Email = $"sem_cpf_rg_{Guid.NewGuid()}@email.com",
-            Senha = "SenhaForte123"
-        };
-
-        var content = new StringContent(
-            JsonSerializer.Serialize(request),
-            Encoding.UTF8, "application/json");
-
-        var response = await _client.PostAsync("/api/auth/register", content);
+        var content = JsonContent(request);
+        var response = await Client.PostAsync("/api/auth/register", content);
 
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.BadRequest);
     }
@@ -228,31 +157,22 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Senha = "SenhaForte123",
             Cpf = "529.982.247-25"
         };
-        var registerContent = new StringContent(JsonSerializer.Serialize(register), Encoding.UTF8, "application/json");
-        var registerResponse = await _client.PostAsync("/api/auth/register", registerContent);
+        var registerContent = JsonContent(register);
+        var registerResponse = await _cookieClient.PostAsync("/api/auth/register", registerContent);
         registerResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
 
-        var registerBody = await registerResponse.Content.ReadAsStringAsync();
-        var authResponse = JsonSerializer.Deserialize<AuthResponse>(registerBody,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var refreshToken = GetRefreshTokenFromResponse(registerResponse);
+        refreshToken.Should().NotBeNullOrEmpty();
 
-        authResponse.Should().NotBeNull();
-        authResponse!.RefreshToken.Should().NotBeNullOrEmpty();
-
-        var refreshRequest = new RefreshTokenRequest { RefreshToken = authResponse.RefreshToken };
-        var refreshContent = new StringContent(JsonSerializer.Serialize(refreshRequest), Encoding.UTF8, "application/json");
-        var refreshResponse = await _client.PostAsync("/api/auth/refresh", refreshContent);
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh");
+        request.Headers.Add("Cookie", $"RefreshToken={refreshToken}");
+        var refreshResponse = await _cookieClient.SendAsync(request);
 
         refreshResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
         
-        var refreshBody = await refreshResponse.Content.ReadAsStringAsync();
-        var newAuthResponse = JsonSerializer.Deserialize<AuthResponse>(refreshBody,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-        newAuthResponse.Should().NotBeNull();
-        newAuthResponse!.Token.Should().NotBeNullOrEmpty();
-        newAuthResponse.RefreshToken.Should().NotBeNullOrEmpty();
-        newAuthResponse.RefreshToken.Should().NotBe(authResponse.RefreshToken);
+        var newRefreshToken = GetRefreshTokenFromResponse(refreshResponse);
+        newRefreshToken.Should().NotBeNullOrEmpty();
+        newRefreshToken.Should().NotBe(refreshToken);
     }
 
     [Fact]
@@ -267,8 +187,8 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
             Senha = "SenhaForte123",
             Cpf = "529.982.247-25"
         };
-        var registerContent = new StringContent(JsonSerializer.Serialize(register), Encoding.UTF8, "application/json");
-        var registerResponse = await _client.PostAsync("/api/auth/register", registerContent);
+        var registerContent = JsonContent(register);
+        var registerResponse = await _cookieClient.PostAsync("/api/auth/register", registerContent);
         registerResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
 
         var registerBody = await registerResponse.Content.ReadAsStringAsync();
@@ -277,15 +197,32 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
         authResponse.Should().NotBeNull();
 
-        _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
+        var refreshToken = GetRefreshTokenFromResponse(registerResponse);
+        refreshToken.Should().NotBeNullOrEmpty();
 
-        var response = await _client.PostAsync("/api/auth/revoke", null);
+        _cookieClient.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
+
+        var response = await _cookieClient.PostAsync("/api/auth/revoke", null);
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
 
-        var refreshRequest = new RefreshTokenRequest { RefreshToken = authResponse.RefreshToken };
-        var refreshContent = new StringContent(JsonSerializer.Serialize(refreshRequest), Encoding.UTF8, "application/json");
-        var refreshResponse = await _client.PostAsync("/api/auth/refresh", refreshContent);
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh");
+        request.Headers.Add("Cookie", $"RefreshToken={refreshToken}");
+        var refreshResponse = await _cookieClient.SendAsync(request);
 
         refreshResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
+    }
+
+    private static string? GetRefreshTokenFromResponse(HttpResponseMessage response)
+    {
+        if (!response.Headers.TryGetValues("Set-Cookie", out var cookies))
+            return null;
+
+        foreach (var cookie in cookies)
+        {
+            var parts = cookie.Split(';')[0].Split('=', 2);
+            if (parts.Length == 2 && parts[0].Trim() == "RefreshToken")
+                return parts[1];
+        }
+        return null;
     }
 }
