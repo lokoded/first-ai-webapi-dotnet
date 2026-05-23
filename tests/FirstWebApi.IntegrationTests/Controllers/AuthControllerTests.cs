@@ -2,7 +2,6 @@ using System.Text;
 using System.Text.Json;
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
-using Microsoft.AspNetCore.Mvc.Testing;
 using FluentAssertions;
 
 namespace FirstWebApi.IntegrationTests.Controllers;
@@ -14,12 +13,12 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
     public AuthControllerTests(FirstWebApiFactory factory)
     {
-        _client = factory.CreateClient();
+        var handler = factory.Server.CreateHandler();
+        _client = new HttpClient(handler) { BaseAddress = new Uri("http://localhost") };
     }
 
     private static StringContent JsonContent<T>(T value) =>
         new(JsonSerializer.Serialize(value), Encoding.UTF8, "application/json");
-
 
     [Fact]
     public async Task PostRegister_WithValidData_ShouldReturn201()
@@ -46,6 +45,7 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
         authResponse.Should().NotBeNull();
         authResponse!.Token.Should().NotBeNullOrEmpty();
         authResponse.Email.Should().Be(request.Email);
+
     }
 
     [Fact]
@@ -215,27 +215,18 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
         var registerResponse = await _client.PostAsync("/api/auth/register", registerContent);
         registerResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Created);
 
-        var registerBody = await registerResponse.Content.ReadAsStringAsync();
-        var authResponse = JsonSerializer.Deserialize<AuthResponse>(registerBody,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+        var refreshToken = GetRefreshTokenFromResponse(registerResponse);
+        refreshToken.Should().NotBeNullOrEmpty();
 
-        authResponse.Should().NotBeNull();
-        authResponse!.RefreshToken.Should().NotBeNullOrEmpty();
-
-        var refreshRequest = new RefreshTokenRequest { RefreshToken = authResponse.RefreshToken };
-        var refreshContent = JsonContent(refreshRequest);
-        var refreshResponse = await _client.PostAsync("/api/auth/refresh", refreshContent);
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh");
+        request.Headers.Add("Cookie", $"RefreshToken={refreshToken}");
+        var refreshResponse = await _client.SendAsync(request);
 
         refreshResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.OK);
         
-        var refreshBody = await refreshResponse.Content.ReadAsStringAsync();
-        var newAuthResponse = JsonSerializer.Deserialize<AuthResponse>(refreshBody,
-            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-
-        newAuthResponse.Should().NotBeNull();
-        newAuthResponse!.Token.Should().NotBeNullOrEmpty();
-        newAuthResponse.RefreshToken.Should().NotBeNullOrEmpty();
-        newAuthResponse.RefreshToken.Should().NotBe(authResponse.RefreshToken);
+        var newRefreshToken = GetRefreshTokenFromResponse(refreshResponse);
+        newRefreshToken.Should().NotBeNullOrEmpty();
+        newRefreshToken.Should().NotBe(refreshToken);
     }
 
     [Fact]
@@ -260,15 +251,32 @@ public class AuthControllerTests : IClassFixture<FirstWebApiFactory>
 
         authResponse.Should().NotBeNull();
 
+        var refreshToken = GetRefreshTokenFromResponse(registerResponse);
+        refreshToken.Should().NotBeNullOrEmpty();
+
         _client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", authResponse!.Token);
 
         var response = await _client.PostAsync("/api/auth/revoke", null);
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.NoContent);
 
-        var refreshRequest = new RefreshTokenRequest { RefreshToken = authResponse.RefreshToken };
-        var refreshContent = JsonContent(refreshRequest);
-        var refreshResponse = await _client.PostAsync("/api/auth/refresh", refreshContent);
+        var request = new HttpRequestMessage(HttpMethod.Post, "/api/auth/refresh");
+        request.Headers.Add("Cookie", $"RefreshToken={refreshToken}");
+        var refreshResponse = await _client.SendAsync(request);
 
         refreshResponse.StatusCode.Should().Be(System.Net.HttpStatusCode.Unauthorized);
+    }
+
+    private static string? GetRefreshTokenFromResponse(HttpResponseMessage response)
+    {
+        if (!response.Headers.TryGetValues("Set-Cookie", out var cookies))
+            return null;
+
+        foreach (var cookie in cookies)
+        {
+            var parts = cookie.Split(';')[0].Split('=', 2);
+            if (parts.Length == 2 && parts[0].Trim() == "RefreshToken")
+                return parts[1];
+        }
+        return null;
     }
 }
