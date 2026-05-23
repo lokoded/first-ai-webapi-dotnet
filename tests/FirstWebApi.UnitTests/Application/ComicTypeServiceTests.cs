@@ -1,3 +1,4 @@
+using FirstWebApi.Application.Exceptions;
 using FirstWebApi.Application.Services;
 using FirstWebApi.Domain.Entities;
 using FirstWebApi.Domain.Interfaces;
@@ -77,7 +78,7 @@ public class ComicTypeServiceTests
 
         Func<Task> act = () => _comicTypeService.DeleteAsync(comicType.Id);
 
-        await act.Should().ThrowAsync<InvalidOperationException>()
+        await act.Should().ThrowAsync<ConflictException>()
             .WithMessage("Tipo possui comics vinculadas. Remova-as primeiro.");
     }
 

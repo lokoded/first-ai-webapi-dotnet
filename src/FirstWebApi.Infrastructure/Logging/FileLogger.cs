@@ -1,9 +1,10 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-namespace FirstWebApi.WebApi.Logging;
+namespace FirstWebApi.Infrastructure.Logging;
 
 public class FileLoggerConfiguration
 {

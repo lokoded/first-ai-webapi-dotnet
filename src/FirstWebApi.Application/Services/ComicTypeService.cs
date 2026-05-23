@@ -1,4 +1,5 @@
 using FirstWebApi.Application.DTOs.Response;
+using FirstWebApi.Application.Exceptions;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Domain.Entities;
 using FirstWebApi.Domain.Interfaces;
@@ -29,7 +30,7 @@ public class ComicTypeService(IComicTypeRepository comicTypeRepository, IUnitOfW
             return false;
 
         if (await comicTypeRepository.HasComicsAsync(id))
-            throw new InvalidOperationException("Tipo possui comics vinculadas. Remova-as primeiro.");
+            throw new ConflictException("Tipo possui comics vinculadas. Remova-as primeiro.");
 
         await comicTypeRepository.DeleteAsync(comicType);
         await unitOfWork.SaveChangesAsync();

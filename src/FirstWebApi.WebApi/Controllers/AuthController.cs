@@ -56,7 +56,7 @@ public class AuthController(
     {
         var userId = User.GetUserId();
         if (userId == Guid.Empty)
-            return Problem(detail: "Token inválido.", statusCode: 401, title: "Não autorizado");
+            return Problem(detail: "Token inválido.", statusCode: StatusCodes.Status401Unauthorized, title: "Não autorizado");
 
         await authService.RevokeRefreshTokensAsync(userId);
         return NoContent();

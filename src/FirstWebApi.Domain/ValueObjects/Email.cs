@@ -2,7 +2,7 @@ using System.Text.RegularExpressions;
 
 namespace FirstWebApi.Domain.ValueObjects;
 
-public readonly partial record struct Email
+public partial record class Email
 {
     public string Endereco { get; }
 

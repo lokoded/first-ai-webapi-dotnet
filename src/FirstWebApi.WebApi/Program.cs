@@ -8,7 +8,6 @@ using FirstWebApi.Domain.Interfaces;
 using FirstWebApi.Infrastructure.Data;
 using FirstWebApi.Infrastructure.Repositories;
 using FirstWebApi.Infrastructure.Services;
-using FirstWebApi.WebApi.Logging;
 using FirstWebApi.WebApi;
 using FirstWebApi.WebApi.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -179,8 +178,8 @@ builder.Services.AddCors(options =>
 builder.Logging.Services.AddSingleton<ILoggerProvider>(sp =>
 {
     var accessor = sp.GetRequiredService<IHttpContextAccessor>();
-    return new FileLoggerProvider(
-        Microsoft.Extensions.Options.Options.Create(new FileLoggerConfiguration
+    return new FirstWebApi.Infrastructure.Logging.FileLoggerProvider(
+        Microsoft.Extensions.Options.Options.Create(new FirstWebApi.Infrastructure.Logging.FileLoggerConfiguration
         {
             Path = builder.Configuration.GetValue<string>("Logging:File:Path") ?? "logs/app-.log",
             Format = builder.Configuration.GetValue<string>("Logging:File:Format") ?? "Json"

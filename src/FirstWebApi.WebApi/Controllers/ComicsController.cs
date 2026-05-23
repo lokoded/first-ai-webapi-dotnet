@@ -45,7 +45,7 @@ public class ComicsController(
 
         var result = await comicService.GetByIdAsync(id, userId);
         if (result is null)
-            return Problem(detail: "Comic não encontrada.", statusCode: 404, title: "Não encontrado");
+            return Problem(detail: "Comic não encontrada.", statusCode: StatusCodes.Status404NotFound, title: "Não encontrado");
 
         return Ok(result);
     }
@@ -86,7 +86,7 @@ public class ComicsController(
 
         var result = await comicService.UpdateAsync(id, request, userId);
         if (result is null)
-            return Problem(detail: "Comic não encontrada.", statusCode: 404, title: "Não encontrado");
+            return Problem(detail: "Comic não encontrada.", statusCode: StatusCodes.Status404NotFound, title: "Não encontrado");
 
         return NoContent();
     }
@@ -103,7 +103,7 @@ public class ComicsController(
 
         var success = await comicService.DeleteAsync(id, userId);
         if (!success)
-            return Problem(detail: "Comic não encontrada.", statusCode: 404, title: "Não encontrado");
+            return Problem(detail: "Comic não encontrada.", statusCode: StatusCodes.Status404NotFound, title: "Não encontrado");
 
         return NoContent();
     }

@@ -16,8 +16,6 @@ public class AdminComicTypesController(
     IComicTypeService comicTypeService,
     IValidator<ComicTypeRequest> validator) : ControllerBase
 {
-    private const string AdminComicTypesBase = "/api/admin/comic-types";
-
     [HttpPost]
     [ProducesResponseType(typeof(ComicTypeResponse), StatusCodes.Status201Created)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
@@ -31,7 +29,7 @@ public class AdminComicTypesController(
             return ValidationProblem(new ValidationProblemDetails(validation.ToDictionary()));
 
         var result = await comicTypeService.CreateAsync(request.Nome);
-        return Created($"{AdminComicTypesBase}/{result.Id}", result);
+        return CreatedAtAction(null, new { id = result.Id }, result);
     }
 
     [HttpDelete("{id:guid}")]
@@ -44,7 +42,7 @@ public class AdminComicTypesController(
     {
         var success = await comicTypeService.DeleteAsync(id);
         if (!success)
-            return Problem(detail: "Tipo de comic não encontrado.", statusCode: 404, title: "Não encontrado");
+            return Problem(detail: "Tipo de comic não encontrado.", statusCode: StatusCodes.Status404NotFound, title: "Não encontrado");
 
         return NoContent();
     }
