@@ -4,7 +4,7 @@ Este documento define o fluxo de trabalho obrigatório para toda nova funcionali
 
 ---
 
-## Ciclo: Spec → Review → Implement → Test → Archive
+## Ciclo: Spec → Review → Branch → Implement → Test → PR → Archive
 
 ```
 [Usuário] → pede funcionalidade
@@ -13,8 +13,8 @@ Este documento define o fluxo de trabalho obrigatório para toda nova funcionali
     ↓  cria specs/features/<nome>.md
 [Usuário] → Fase 2: Review
     ↓  lê e aprova/ajusta a spec
-[IA] → Fase 3: Implementação
-    ↓  codifica seguindo specs/00-08
+[IA] → Fase 3: Branch + Implementação
+    ↓  git checkout -b feature/<nome>, depois codifica
 [IA] → Fase 4: Testes
     ↓  unit + integration (ou existentes)
 [IA] → Fase 5: Verificação
@@ -22,35 +22,19 @@ Este documento define o fluxo de trabalho obrigatório para toda nova funcionali
     ↓
 [Usuário] → aprova resultado
     ↓
+[IA] → Fase 5.5: Push + PR
+    ↓  git push -u origin <branch> && gh pr create
 [IA] → Fase 6: Archive
     ↓  move spec para specs/archive/<feature>/
-[IA] → commit (se aplicável) + pergunta se faz push
+[IA] → (após merge) deletar branch local + remota
 ```
 
 ---
 
-## Fase 1 — Spec
+## Fase 3 — Branch + Implementação
 
-A IA cria um arquivo em `specs/features/<nome-da-feature>.md` usando o template.
-
-### Conteúdo obrigatório:
-1. **Objetivo** — o que esta feature faz (1 parágrafo)
-2. **User Story** — "Como [ator], quero [ação] para [benefício]"
-3. **Contrato da API** — método, rota, request (body/params), response, status codes
-4. **Regras de negócio** — validações, autorização, ownership
-5. **Exemplo de Request/Response**
-6. **Cenários de Teste** — happy path + edge cases (tabela)
-7. **Critérios de Aceitação** — checklist do que é "pronto"
-
-## Fase 2 — Review
-
-Usuário lê a spec, sugere ajustes, aprova ou solicita alterações.
-
-Nenhum código é escrito antes da aprovação da spec.
-
-## Fase 3 — Implementação
-
-A IA implementa seguindo:
+A IA cria a branch: `git checkout -b feature/<nome>` (ou `fix/<nome>`).
+Depois implementa seguindo:
 - `specs/00-architecture.md` — estrutura de camadas
 - `specs/01-coding-standards.md` — convenções de código
 - `specs/02-security-owasp.md` — segurança
@@ -59,27 +43,24 @@ A IA implementa seguindo:
 - `specs/05-logging-serialization.md` — logs
 - `specs/08-anti-patterns.md` — o que evitar
 
-## Fase 4 — Testes
-
-A IA escreve ou atualiza:
-- Testes unitários (Moq) para o service
-- Testes de integração (WebApplicationFactory) para o endpoint
-- Cobertura dos status codes da spec
-
-## Fase 5 — Verificação
+## Fase 5 — Verificação + PR
 
 ```powershell
 dotnet build
 dotnet test
 ```
 
-Se falhar, corrigir. Se passar, perguntar ao usuário se deseja commit/push.
+Se falhar, corrigir. Se passar:
+1. `git push -u origin <branch>`
+2. `gh pr create --base develop`
+3. Aguardar merge.
 
 ## Fase 6 — Archive
 
-Após o commit/push, specs de features/bugs concluídos e mergeados em `main` são movidas para `specs/archive/<nome-da-feature>/`.
+Após o merge na `develop`, a IA:
+1. Deleta a branch local e remota (`git branch -d` + `git push origin --delete`).
+2. Move spec de `specs/features/` para `specs/archive/<feature>/`.
 
-Exceção: specs de contrato de API pública de longo prazo podem permanecer em `features/`.
 
 ---
 

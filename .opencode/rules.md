@@ -88,13 +88,18 @@ tests/
 
 ## Workflow de Branches
 
-- Toda branch `feature/*` ou `fix/*` parte da `develop` e faz PR para `develop`
+- Toda alteração em `src/` ou `tests/` deve partir de uma branch `feature/*` ou `fix/*` partindo da `develop`.
+- Alterações puramente documentais (`*.md`, `.opencode/*`, `specs/*.md`, `configs`) podem ser commitadas diretamente na `develop` se o usuário autorizar.
+- Após merge do PR para `develop`, a IA deve:
+  1. `git checkout develop`
+  2. `git pull`
+  3. `git branch -d feature/<nome>` ou `git branch -d fix/<nome>`
+  4. `git push origin --delete feature/<nome>` ou `git push origin --delete fix/<nome>`
 - `hotfix/*` parte da `main` e faz PR para `main` (correção urgente em produção)
 - `release/*` parte da `develop` e faz PR para `main`
 - `main` só recebe merge via `develop` → `main` ou `hotfix/*` → `main`
 - Após merge de `hotfix/*` → `main`, fazer merge de volta para `develop`
 - Após qualquer PR mergir em `main`, sincronizar `develop` via `git rebase main` ou `git reset --hard main`
-- Branches merged são deletadas local e remotamente — `git branch -d` e `git push origin --delete`
 - Exceção: branches de longo prazo (`develop`, `main`)
 
 ## Workflow de Specs
@@ -105,9 +110,12 @@ tests/
 
 ## Workflow de Commits
 
-- Ao marcar um todo como `completed`, executar automaticamente:
-  1. `git add -A`
-  2. `git commit -m "<tipo>: <descrição>"` seguindo **Conventional Commits**
+- Ao marcar um todo como `completed`:
+  1. **Se for código (`src/`, `tests/`) e não estiver em `feature/*` ou `fix/*`**:
+     - Derivar nome da branch: `feature/<nome>` ou `fix/<nome>` a partir do todo
+     - Executar: `git checkout -b <nome-branch>`
+  2. `git add -A`
+  3. `git commit -m "<tipo>: <descrição>"` seguindo **Conventional Commits**
 - Tipos derivados do contexto do todo:
   - `feat` — nova funcionalidade
   - `fix` — correção de bug
@@ -120,7 +128,9 @@ tests/
 - Exemplo: todo *"Criar endpoint de login"* → commit `feat: criar endpoint de login`
 - Se não houver mudanças a commitar, pular silenciosamente
 - Se o commit falhar, reportar o erro ao usuário e não prosseguir
-- Ao marcar o **último** todo como `completed`, perguntar ao usuário: *"Deseja fazer push?"* — se sim, executar `git push`
+- Ao marcar o **último** todo da feature:
+  1. Perguntar: *"Deseja fazer push e criar PR?"*
+  2. Se sim: `git push -u origin <branch>` e `gh pr create --base develop`
 
 ## 🚦 Pré-condições Operacionais
 
