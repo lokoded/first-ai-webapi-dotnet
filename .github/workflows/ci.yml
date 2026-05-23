@@ -64,6 +64,55 @@ jobs:
       - name: Vulnerability Scan
         run: dotnet list package --vulnerable --include-transitive 2>&1
 
+      - name: Check Coverage Threshold
+        shell: pwsh
+        run: |
+          $threshold = 70
+          $exceptions = @{ "FirstWebApi.Application" = 60 }
+          $projectMaxCov = @{}
+          $projectSources = @{}
+          Get-ChildItem -Recurse -Filter "coverage.cobertura.xml" | ForEach-Object {
+            $source = if ($_.FullName -match "IntegrationTests") { "Integration" } else { "Unit" }
+            $xml = [xml](Get-Content $_.FullName)
+            $overall = [double]($xml.coverage."line-rate") * 100
+            Write-Host "## $source Tests Coverage"
+            Write-Host "Geral: $([math]::Round($overall, 1))%"
+            foreach ($pkg in $xml.coverage.packages.package) {
+              $name = $pkg.name
+              $cov = [double]($pkg."line-rate") * 100
+              if (-not $projectMaxCov.ContainsKey($name) -or $cov -gt $projectMaxCov[$name]) {
+                $projectMaxCov[$name] = $cov
+                $projectSources[$name] = @($source)
+              } elseif ($cov -eq $projectMaxCov[$name]) {
+                $projectSources[$name] += $source
+              }
+              $min = if ($exceptions.ContainsKey($name)) { $exceptions[$name] } else { $threshold }
+              if ($cov -lt $min) {
+                Write-Host "  $name`: $([math]::Round($cov, 1))% (ATENCAO: abaixo de $min%)"
+              } else {
+                Write-Host "  $name`: $([math]::Round($cov, 1))% (OK)"
+              }
+            }
+          }
+          Write-Host ""
+          Write-Host "## Resumo por Projeto (melhor cobertura)"
+          $failures = @()
+          foreach ($name in $projectMaxCov.Keys | Sort-Object) {
+            $cov = $projectMaxCov[$name]
+            $sources = $projectSources[$name] -join ", "
+            $min = if ($exceptions.ContainsKey($name)) { $exceptions[$name] } else { $threshold }
+            if ($cov -lt $min) {
+              Write-Host "::warning::$name $([math]::Round($cov, 1))% ($sources) abaixo do minimo $min% (target: $threshold%)"
+              $failures += "$name ($([math]::Round($cov, 1))% em $sources)"
+            } else {
+              Write-Host "  $name`: $([math]::Round($cov, 1))% ($sources) (OK)"
+            }
+          }
+          if ($failures.Count -gt 0) {
+            throw "Projetos abaixo do threshold minimo: $($failures -join ', ')"
+          }
+          Write-Host "Todos os projetos atendem o threshold de cobertura"
+
       - name: Upload Coverage Reports
         if: always()
         uses: actions/upload-artifact@v4

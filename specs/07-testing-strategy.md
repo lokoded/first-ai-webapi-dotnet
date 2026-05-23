@@ -56,6 +56,26 @@ Por endpoint, testar:
 | Conflito | 409 |
 | Erro de negócio | 422 |
 
+## Threshold Mínimo
+
+- **70% line coverage** (sequence coverage) obrigatório em cada projeto
+- No CI, usa-se a **melhor cobertura por projeto entre todas as fontes** (unit + integration)
+  - Domain e Application: oriundos dos unit tests (97.2% Application, 85.4% Domain)
+  - Infrastructure e WebApi: oriundos dos integration tests (80.5%, 74.2%)
+- Exceção progressiva: `FirstWebApi.Application` começa em 60% (mínimo), target 70%
+- Verificado no CI via step pós-testes que parseia `coverage.cobertura.xml`
+- Comando oficial para validação local:
+
+```powershell
+dotnet test --settings coverlet.runsettings
+```
+
+- Cobertura atual (23/05/2026) — **melhor fonte por projeto**:
+  - Application: 97.2% ✅ (unit)
+  - Domain: 85.4% ✅ (unit)
+  - Infrastructure: 80.5% ✅ (integration)
+  - WebApi: 74.2% ✅ (integration)
+
 ## Comandos
 
 ```powershell

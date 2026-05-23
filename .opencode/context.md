@@ -25,8 +25,8 @@ FirstWebApi.slnx
 │   ├── FirstWebApi.Infrastructure/ # EF Core, Repositories, JWT, KMS, Redis decorators
 │   ├── FirstWebApi.WebApi/        # Controllers, Middleware, Program.cs
 └── tests/
-    ├── FirstWebApi.UnitTests/     # 35 testes
-    └── FirstWebApi.IntegrationTests/ # 21 testes
+    ├── FirstWebApi.UnitTests/     # 107 testes (97.2% Application)
+    └── FirstWebApi.IntegrationTests/ # 32 testes
 ```
 
 ## Status Atual
@@ -34,11 +34,12 @@ FirstWebApi.slnx
 | Item | Status |
 |------|--------|
 | Build | 0 erros, 0 warnings |
-| Testes unitários | 35/35 ✅ |
-| Testes de integração | 21/21 ✅ |
+| Testes unitários | 107/107 ✅ |
+| Testes de integração | 32/32 ✅ |
 | Docker Compose | sqlserver + redis + localstack + api rodando |
 | GitHub Actions | ✅ CI + Security Scan |
-| Cobertura de código | ❌ Não mensurada |
+| Cobertura de código | ✅ 74.5% (integration) — threshold 70% no CI |
+| Application (unit) | ✅ 97.2% — 107 testes unitários |
 | OpenCode | v1.15.5 configurado |
 | Migrations | 2 (InitialCreate, AddRefreshTokens) |
 
@@ -65,7 +66,7 @@ FirstWebApi.slnx
 
 1. Paginação server-side (OFFSET/FETCH)
 2. CI/CD (GitHub Actions)
-3. Cobertura de testes mensurada
+3. ~~Cobertura de testes mensurada~~ ✅ Implementada (threshold 70% no CI)
 4. Health checks com probes reais (DB, Redis, KMS)
 5. Serilog ou evolução do FileLogger
 6. Endpoints faltantes (PUT address, DELETE user)
@@ -93,6 +94,7 @@ FirstWebApi.slnx
 dotnet build                                  # Compilar
 dotnet test tests/FirstWebApi.UnitTests       # Testes unitários
 dotnet test tests/FirstWebApi.IntegrationTests # Testes de integração
+dotnet test --settings coverlet.runsettings   # Testes com cobertura (threshold 70%)
 docker compose up -d                          # Subir infra
 docker compose down -v                        # Destruir infra
 ```
