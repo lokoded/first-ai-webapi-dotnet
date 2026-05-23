@@ -28,8 +28,12 @@ public class RegisterRequestValidator : AbstractValidator<RegisterRequest>
             .Matches(@"[a-z]").WithMessage("Senha deve conter pelo menos uma letra minúscula.")
             .Matches(@"\d").WithMessage("Senha deve conter pelo menos um número.");
 
-        RuleFor(x => x)
-            .Must(x => !string.IsNullOrEmpty(x.Cpf) || !string.IsNullOrEmpty(x.Rg))
+        RuleFor(x => x.Cpf)
+            .Must((model, cpf) => !string.IsNullOrWhiteSpace(cpf) || !string.IsNullOrWhiteSpace(model.Rg))
+            .WithMessage("CPF ou RG deve ser informado.");
+
+        RuleFor(x => x.Rg)
+            .Must((model, rg) => !string.IsNullOrWhiteSpace(rg) || !string.IsNullOrWhiteSpace(model.Cpf))
             .WithMessage("CPF ou RG deve ser informado.");
 
         When(x => !string.IsNullOrEmpty(x.Cpf), () =>
