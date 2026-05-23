@@ -17,10 +17,9 @@ public class AuthServiceTests
     private readonly Mock<UserManager<User>> _userManagerMock;
     private readonly Mock<IUserRepository> _userRepoMock;
     private readonly Mock<ITokenService> _tokenServiceMock;
-    private readonly Mock<IEncryptionService> _encryptionMock;
+    private readonly Mock<ISensitiveDataService> _sensitiveDataMock;
     private readonly Mock<IUnitOfWork> _unitOfWorkMock;
     private readonly Mock<ILogger<AuthService>> _loggerMock;
-    private readonly Mock<IAddressRepository> _addressRepoMock;
     private readonly Mock<IRefreshTokenRepository> _refreshTokenRepoMock;
     private readonly AuthService _authService;
 
@@ -32,20 +31,18 @@ public class AuthServiceTests
         _tokenServiceMock = new Mock<ITokenService>();
         _tokenServiceMock.Setup(t => t.GenerateRefreshToken())
             .Returns(("fake-refresh-token", "fake-hash"));
-        _encryptionMock = new Mock<IEncryptionService>();
+        _sensitiveDataMock = new Mock<ISensitiveDataService>();
         _unitOfWorkMock = new Mock<IUnitOfWork>();
         _loggerMock = new Mock<ILogger<AuthService>>();
-        _addressRepoMock = new Mock<IAddressRepository>();
         _refreshTokenRepoMock = new Mock<IRefreshTokenRepository>();
 
         _authService = new AuthService(
             _userManagerMock.Object,
             _userRepoMock.Object,
             _tokenServiceMock.Object,
-            _encryptionMock.Object,
+            _sensitiveDataMock.Object,
             _unitOfWorkMock.Object,
             _loggerMock.Object,
-            _addressRepoMock.Object,
             _refreshTokenRepoMock.Object);
     }
 
@@ -153,7 +150,7 @@ public class AuthServiceTests
         };
 
         Func<Task> act = () => _authService.LoginAsync(request);
-        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+        await act.Should().ThrowAsync<UnauthorizedException>()
             .WithMessage("Email ou senha inválidos.");
     }
 
@@ -193,7 +190,7 @@ public class AuthServiceTests
             .ReturnsAsync((RefreshToken?)null);
 
         Func<Task> act = () => _authService.RefreshTokenAsync("invalid-token");
-        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+        await act.Should().ThrowAsync<UnauthorizedException>()
             .WithMessage("Refresh token inválido ou expirado.");
     }
 
@@ -208,7 +205,7 @@ public class AuthServiceTests
             .ReturnsAsync(storedToken);
 
         Func<Task> act = () => _authService.RefreshTokenAsync("expired-token");
-        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+        await act.Should().ThrowAsync<UnauthorizedException>()
             .WithMessage("Refresh token inválido ou expirado.");
     }
 
@@ -227,7 +224,7 @@ public class AuthServiceTests
         _unitOfWorkMock.Setup(u => u.SaveChangesAsync(default)).ReturnsAsync(1);
 
         Func<Task> act = () => _authService.RefreshTokenAsync("revoked-token");
-        await act.Should().ThrowAsync<UnauthorizedAccessException>()
+        await act.Should().ThrowAsync<UnauthorizedException>()
             .WithMessage("Refresh token inválido ou expirado.");
     }
 

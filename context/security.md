@@ -45,8 +45,12 @@ Evite soluções excessivamente complexas ou enterprise sem necessidade.
 - **Account lockout**: 5 tentativas, 15 min de bloqueio
 - **Security headers**: X-Content-Type-Options, X-Frame-Options, Referrer-Policy, Permissions-Policy
 - **CORS**: restrito por ambiente (via configuração)
-- **Criptografia LGPD**: CPF, RG e endereço cifrados via `IEncryptionService` (AWS KMS `GenerateDataKey` + AES-256-CBC envelope). Dados armazenados como `byte[]` (`*Ciphertext`, `*Iv`, `*Tag`, `*EncryptedDataKey`)
-- **Tag no AES-CBC**: sempre vazio (`Array.Empty<byte>()`) — CBC não usa tag
+- **Criptografia LGPD**: CPF, RG e endereço cifrados via `IEncryptionService`
+  (AWS KMS `GenerateDataKey` + AES-256-GCM envelope).
+  Armazenados como `DadoProtegido(byte[])` — blob opaco.
+  O formato interno de serialização é responsabilidade exclusiva da Infrastructure,
+  não exposto ao Domain. A Application trafega `DadoProtegido`, o Domain não conhece
+  o conceito de algoritmo criptográfico.
 - **Role padrão**: todo usuário registrado recebe "User". Admin promovido manualmente no banco
 - **Logs**: nunca contêm secrets, CPF, RG ou dados sensíveis
 - **Exception middleware**: nunca expõe stack trace

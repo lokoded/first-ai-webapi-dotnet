@@ -135,7 +135,7 @@ Antes de executar comandos, verificar os pré-requisitos:
 1. `SuppressModelStateInvalidFilter = true` — SEMPRE validar com FluentValidation manualmente
 2. `KmsEncryptionService` inicialização é lazy (`Lazy<Task>`) — primeira chamada pode ser lenta se LocalStack estiver offline
 3. Paginação do `ComicService.GetAllAsync` usa OFFSET/FETCH no banco — NÃO é mais em memória
-4. `Tag` no AES-GCM tem 16 bytes — diferente do CBC antigo (Array.Empty)
+4. `DadoProtegido` é um blob opaco — NUNCA acessar `Valor` diretamente no Domain ou Application. A responsabilidade de serialização é exclusiva da Infrastructure (KmsEncryptionService + ValueConverter). Se o formato interno precisar mudar, atualizar ambos em conjunto.
 5. Migration automática só roda em Development/Testing — em produção usar script idempotente
 6. `User.Role` removido — autorização usa exclusivamente `ClaimTypes.Role` do Identity
 7. Integration tests compartilham banco `FirstWebApiDb_Test` — rodar em sequência (Collection)

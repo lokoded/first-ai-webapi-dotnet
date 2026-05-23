@@ -149,3 +149,31 @@ Registro de decisões arquiteturais importantes. Novas decisões devem ser adici
 - **Decisão**: Usar `System.Threading.RateLimiting` (nativo) em vez de `AspNetCoreRateLimit` (biblioteca externa)
 - **Consequências**: Zero dependência extra, API nativa, policies por endpoint (Auth: 10 req/min, Default: 100 req/min)
 - **Alternativa rejeitada**: `AspNetCoreRateLimit` — dependência externa desnecessária
+
+### ADR-007: DadoProtegido — blob único opaco para dados cifrados
+
+- **Data**: 2026-05-22
+- **Status**: Accepted
+- **Contexto**: Dados cifrados eram armazenados em 4 colunas `byte[]` por campo
+  (Ciphertext, IV, Tag, EncryptedDataKey), expondo primitivas de crypto
+  (AES-GCM + envelope KMS) no Domain — violação de Clean Architecture.
+- **Decisão**:
+  1. `Domain/ValueObjects/DadoProtegido(byte[] Valor)` — blob único opaco,
+     sem qualquer detalhe de algoritmo criptográfico
+  2. `EncryptedData(Ciphertext, Iv, Tag, EncryptedDataKey)` movido para
+     Infrastructure como tipo interno de serialização
+  3. `IEncryptionService` passa a retornar/trafegar `DadoProtegido`
+  4. Entities (User, Address): 1 propriedade `byte[]?` por campo cifrado
+     (ex: `CpfDados`, `RgDados`, `Dados`) em vez de 4 propriedades
+  5. EF Core ValueConverter empacota/desempacota `EncryptedData ↔ byte[]`
+     transparentemente
+- **Consequências**:
+  - Domain não conhece algoritmo de criptografia
+  - Trocar algoritmo (ex: AES-GCM → ChaCha20) = só alterar Infrastructure
+  - Migration única para consolidar colunas: 12→3 (User), 4→1 (Address)
+  - Perda da visibilidade dos componentes da cifra no banco (aceitável)
+- **Alternativa rejeitada**: Manter 4 colunas com renomeação genérica
+  ("ParametroA", "ParametroB") — abstração hipócrita, fere Clareza
+- **Alternativa rejeitada**: Manter status quo (12 colunas) — fere Clean Architecture
+- **Mercado**: Prática padrão — EF Core ValueConverters (Microsoft docs),
+  Amazon DynamoDB Encryption Client, projetos Clean Architecture reais

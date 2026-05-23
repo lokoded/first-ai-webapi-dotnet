@@ -1,4 +1,3 @@
-using System.Text.Json;
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
 using FirstWebApi.Application.Exceptions;
@@ -15,10 +14,9 @@ public class AuthService(
     UserManager<User> userManager,
     IUserRepository userRepository,
     ITokenService tokenService,
-    IEncryptionService encryptionService,
+    ISensitiveDataService sensitiveData,
     IUnitOfWork unitOfWork,
     ILogger<AuthService> logger,
-    IAddressRepository addressRepository,
     IRefreshTokenRepository refreshTokenRepository) : IAuthService
 {
     private static readonly TimeSpan RefreshTokenExpiry = TimeSpan.FromDays(7);
@@ -48,27 +46,9 @@ public class AuthService(
 
         await userManager.AddToRoleAsync(user, "User");
 
-        if (!string.IsNullOrEmpty(request.Cpf))
-        {
-            var cpf = new Cpf(request.Cpf);
-            var data = await encryptionService.EncryptAsync(cpf.Numero);
-            user.SetCpfData(data);
-        }
-
-        if (!string.IsNullOrEmpty(request.Rg))
-        {
-            var data = await encryptionService.EncryptAsync(request.Rg);
-            user.SetRgData(data);
-        }
-
-        if (request.Endereco != null && !request.Endereco.IsEmpty)
-        {
-            var json = JsonSerializer.Serialize(request.Endereco);
-            var data = await encryptionService.EncryptAsync(json);
-            var address = new Address(user.Id);
-            address.SetEncryptedData(data);
-            await addressRepository.AddAsync(address);
-        }
+        await sensitiveData.EncryptCpfAsync(user, request.Cpf);
+        await sensitiveData.EncryptRgAsync(user, request.Rg);
+        await sensitiveData.EncryptEnderecoAsync(user.Id, request.Endereco);
 
         var refreshToken = await CreateRefreshTokenAsync(user.Id);
         await unitOfWork.SaveChangesAsync();
@@ -85,18 +65,18 @@ public class AuthService(
         if (user == null)
         {
             await userManager.CheckPasswordAsync(IdentityUserPlaceholder(), "fake");
-            throw new UnauthorizedAccessException(InvalidEmailOrPassword);
+            throw new UnauthorizedException(InvalidEmailOrPassword);
         }
 
         if (await userManager.IsLockedOutAsync(user))
-            throw new UnauthorizedAccessException("Conta temporariamente bloqueada por muitas tentativas inválidas. Tente novamente em 15 minutos.");
+            throw new UnauthorizedException("Conta temporariamente bloqueada por muitas tentativas inválidas. Tente novamente em 15 minutos.");
 
         var passwordValid = await userManager.CheckPasswordAsync(user, request.Senha);
         if (!passwordValid)
         {
             await userManager.AccessFailedAsync(user);
             logger.LogWarning("Tentativa de login inválida para usuário {UserId}", user.Id);
-            throw new UnauthorizedAccessException(InvalidEmailOrPassword);
+            throw new UnauthorizedException(InvalidEmailOrPassword);
         }
 
         await userManager.ResetAccessFailedCountAsync(user);
@@ -116,24 +96,24 @@ public class AuthService(
         var storedToken = await refreshTokenRepository.GetByTokenHashAsync(tokenHash);
 
         if (storedToken is null)
-            throw new UnauthorizedAccessException(InvalidRefreshToken);
+            throw new UnauthorizedException(InvalidRefreshToken);
 
         if (storedToken.IsRevoked)
         {
             logger.LogWarning("Possível roubo de refresh token detectado para usuário {UserId}. Revogando todos os tokens.", storedToken.UserId);
             await RevokeRefreshTokensAsync(storedToken.UserId);
-            throw new UnauthorizedAccessException(InvalidRefreshToken);
+            throw new UnauthorizedException(InvalidRefreshToken);
         }
 
         if (storedToken.IsExpired)
-            throw new UnauthorizedAccessException(InvalidRefreshToken);
+            throw new UnauthorizedException(InvalidRefreshToken);
 
         storedToken.Revoke();
         await refreshTokenRepository.UpdateAsync(storedToken);
 
         var user = await userRepository.GetByIdAsync(storedToken.UserId);
         if (user is null)
-            throw new UnauthorizedAccessException(UserNotFound);
+            throw new UnauthorizedException(UserNotFound);
 
         var newRefreshToken = await CreateRefreshTokenAsync(user.Id);
         await unitOfWork.SaveChangesAsync();

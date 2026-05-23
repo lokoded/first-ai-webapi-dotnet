@@ -8,7 +8,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace FirstWebApi.Infrastructure.Data.Migrations
+namespace FirstWebApi.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
     partial class AppDbContextModelSnapshot : ModelSnapshot
@@ -28,19 +28,10 @@ namespace FirstWebApi.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<byte[]>("Ciphertext")
-                        .HasColumnType("varbinary(max)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<byte[]>("EncryptedDataKey")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("Iv")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("Tag")
+                    b.Property<byte[]>("Dados")
                         .HasColumnType("varbinary(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -168,16 +159,7 @@ namespace FirstWebApi.Infrastructure.Data.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<byte[]>("CpfCiphertext")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("CpfEncryptedDataKey")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("CpfIv")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("CpfTag")
+                    b.Property<byte[]>("CpfDados")
                         .HasColumnType("varbinary(max)");
 
                     b.Property<DateTime>("CreatedAt")
@@ -218,16 +200,7 @@ namespace FirstWebApi.Infrastructure.Data.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
-                    b.Property<byte[]>("RgCiphertext")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("RgEncryptedDataKey")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("RgIv")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("RgTag")
+                    b.Property<byte[]>("RgDados")
                         .HasColumnType("varbinary(max)");
 
                     b.Property<string>("SecurityStamp")

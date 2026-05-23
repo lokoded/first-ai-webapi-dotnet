@@ -96,7 +96,7 @@ public class KmsEncryptionService(
         }
     }
 
-    public async Task<EncryptedData> EncryptAsync(string plaintext)
+    public async Task<DadoProtegido> EncryptAsync(string plaintext)
     {
         await EnsureInitializedAsync();
         var dataKeyResponse = await _kmsClient.GenerateDataKeyAsync(new GenerateDataKeyRequest
@@ -125,19 +125,22 @@ public class KmsEncryptionService(
         using var aesGcm = new AesGcm(plaintextKeyBytes, AesGcm.TagByteSizes.MaxSize);
         aesGcm.Encrypt(nonce, plaintextBytes, ciphertextBytes, tag);
 
-        return new EncryptedData(ciphertextBytes, nonce, tag, encryptedDataKeyBytes);
+        var encrypted = new EncryptedData(ciphertextBytes, nonce, tag, encryptedDataKeyBytes);
+        return new DadoProtegido(Pack(encrypted));
     }
 
-    public async Task<string> DecryptAsync(EncryptedData data)
+    public async Task<string> DecryptAsync(DadoProtegido data)
     {
         await EnsureInitializedAsync();
-        var cacheKey = Convert.ToBase64String(data.EncryptedDataKey);
+        var encrypted = Unpack(data.Valor);
+
+        var cacheKey = Convert.ToBase64String(encrypted.EncryptedDataKey);
 
         if (!_cache.TryGetValue(cacheKey, out byte[]? plaintextKey))
         {
             var decryptResponse = await _kmsClient.DecryptAsync(new DecryptRequest
             {
-                CiphertextBlob = new MemoryStream(data.EncryptedDataKey),
+                CiphertextBlob = new MemoryStream(encrypted.EncryptedDataKey),
                 KeyId = _keyId
             });
             plaintextKey = decryptResponse.Plaintext.ToArray();
@@ -148,10 +151,36 @@ public class KmsEncryptionService(
             });
         }
 
-        var plaintextBytes = new byte[data.Ciphertext.Length];
+        var plaintextBytes = new byte[encrypted.Ciphertext.Length];
         using var aesGcm = new AesGcm(plaintextKey!, AesGcm.TagByteSizes.MaxSize);
-        aesGcm.Decrypt(data.Iv, data.Ciphertext, data.Tag, plaintextBytes);
+        aesGcm.Decrypt(encrypted.Iv, encrypted.Ciphertext, encrypted.Tag, plaintextBytes);
 
         return System.Text.Encoding.UTF8.GetString(plaintextBytes);
+    }
+
+    private static byte[] Pack(EncryptedData data)
+    {
+        using var ms = new MemoryStream();
+        var bw = new BinaryWriter(ms);
+        bw.Write(data.Ciphertext.Length);
+        bw.Write(data.Ciphertext);
+        bw.Write(data.Iv.Length);
+        bw.Write(data.Iv);
+        bw.Write(data.Tag.Length);
+        bw.Write(data.Tag);
+        bw.Write(data.EncryptedDataKey.Length);
+        bw.Write(data.EncryptedDataKey);
+        return ms.ToArray();
+    }
+
+    private static EncryptedData Unpack(byte[] blob)
+    {
+        using var ms = new MemoryStream(blob);
+        var br = new BinaryReader(ms);
+        var ciphertext = br.ReadBytes(br.ReadInt32());
+        var iv = br.ReadBytes(br.ReadInt32());
+        var tag = br.ReadBytes(br.ReadInt32());
+        var encryptedDataKey = br.ReadBytes(br.ReadInt32());
+        return new EncryptedData(ciphertext, iv, tag, encryptedDataKey);
     }
 }

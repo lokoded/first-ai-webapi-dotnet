@@ -4,6 +4,6 @@ namespace FirstWebApi.Application.Interfaces;
 
 public interface IEncryptionService
 {
-    Task<EncryptedData> EncryptAsync(string plaintext);
-    Task<string> DecryptAsync(EncryptedData data);
+    Task<DadoProtegido> EncryptAsync(string plaintext);
+    Task<string> DecryptAsync(DadoProtegido data);
 }

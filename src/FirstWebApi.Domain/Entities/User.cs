@@ -7,25 +7,18 @@ public class User : IdentityUser<Guid>
 {
     public string Nome { get; private set; } = string.Empty;
 
-    public byte[]? CpfCiphertext { get; private set; }
-    public byte[]? CpfIv { get; private set; }
-    public byte[]? CpfTag { get; private set; }
-    public byte[]? CpfEncryptedDataKey { get; private set; }
-
-    public byte[]? RgCiphertext { get; private set; }
-    public byte[]? RgIv { get; private set; }
-    public byte[]? RgTag { get; private set; }
-    public byte[]? RgEncryptedDataKey { get; private set; }
+    public byte[]? CpfDados { get; private set; }
+    public byte[]? RgDados { get; private set; }
 
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; private set; }
 
-    public EncryptedData? CpfData => CpfCiphertext is not null
-        ? new EncryptedData(CpfCiphertext, CpfIv!, CpfTag!, CpfEncryptedDataKey!)
+    public DadoProtegido? CpfData => CpfDados is not null
+        ? new DadoProtegido(CpfDados)
         : null;
 
-    public EncryptedData? RgData => RgCiphertext is not null
-        ? new EncryptedData(RgCiphertext, RgIv!, RgTag!, RgEncryptedDataKey!)
+    public DadoProtegido? RgData => RgDados is not null
+        ? new DadoProtegido(RgDados)
         : null;
 
     protected User() { }
@@ -38,19 +31,9 @@ public class User : IdentityUser<Guid>
         Email = email;
     }
 
-    public void SetCpfData(EncryptedData data)
-    {
-        CpfCiphertext = data.Ciphertext;
-        CpfIv = data.Iv;
-        CpfTag = data.Tag;
-        CpfEncryptedDataKey = data.EncryptedDataKey;
-    }
+    public void SetCpfData(DadoProtegido data)
+        => CpfDados = data.Valor;
 
-    public void SetRgData(EncryptedData data)
-    {
-        RgCiphertext = data.Ciphertext;
-        RgIv = data.Iv;
-        RgTag = data.Tag;
-        RgEncryptedDataKey = data.EncryptedDataKey;
-    }
+    public void SetRgData(DadoProtegido data)
+        => RgDados = data.Valor;
 }

@@ -9,11 +9,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
 
-namespace FirstWebApi.Infrastructure.Data.Migrations
+namespace FirstWebApi.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260520053155_AddRefreshTokens")]
-    partial class AddRefreshTokens
+    [Migration("20260523034948_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -31,19 +31,10 @@ namespace FirstWebApi.Infrastructure.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<byte[]>("Ciphertext")
-                        .HasColumnType("varbinary(max)");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
-                    b.Property<byte[]>("EncryptedDataKey")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("Iv")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("Tag")
+                    b.Property<byte[]>("Dados")
                         .HasColumnType("varbinary(max)");
 
                     b.Property<DateTime?>("UpdatedAt")
@@ -115,6 +106,9 @@ namespace FirstWebApi.Infrastructure.Data.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
                     b.HasKey("Id");
 
                     b.HasIndex("Nome")
@@ -168,16 +162,7 @@ namespace FirstWebApi.Infrastructure.Data.Migrations
                         .IsConcurrencyToken()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<byte[]>("CpfCiphertext")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("CpfEncryptedDataKey")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("CpfIv")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("CpfTag")
+                    b.Property<byte[]>("CpfDados")
                         .HasColumnType("varbinary(max)");
 
                     b.Property<DateTime>("CreatedAt")
@@ -218,20 +203,8 @@ namespace FirstWebApi.Infrastructure.Data.Migrations
                     b.Property<bool>("PhoneNumberConfirmed")
                         .HasColumnType("bit");
 
-                    b.Property<byte[]>("RgCiphertext")
+                    b.Property<byte[]>("RgDados")
                         .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("RgEncryptedDataKey")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("RgIv")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<byte[]>("RgTag")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<int>("Role")
-                        .HasColumnType("int");
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("nvarchar(max)");
