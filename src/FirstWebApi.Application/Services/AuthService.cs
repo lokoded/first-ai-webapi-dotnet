@@ -26,6 +26,9 @@ public class AuthService(
 
     public async Task<AuthResponse> RegisterAsync(RegisterRequest request)
     {
+        if (string.IsNullOrWhiteSpace(request.Cpf) && string.IsNullOrWhiteSpace(request.Rg))
+            throw new BadRequestException("CPF ou RG deve ser informado.");
+
         var existingEmail = await userRepository.GetByEmailAsync(request.Email);
         if (existingEmail != null)
             throw new ConflictException("Email já cadastrado.");

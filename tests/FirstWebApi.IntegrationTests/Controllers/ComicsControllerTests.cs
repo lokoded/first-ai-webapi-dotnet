@@ -69,11 +69,13 @@ public class ComicsControllerTests(FirstWebApiFactory factory) : IntegrationTest
         Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
+        var comicTypeId = SeedComicType();
+
         var request = new ComicRequest
         {
             Titulo = "",
             WebUrl = "https://exemplo.com/invalida",
-            ComicTypeId = Guid.NewGuid()
+            ComicTypeId = comicTypeId
         };
 
         var content = JsonContent(request);
@@ -90,11 +92,13 @@ public class ComicsControllerTests(FirstWebApiFactory factory) : IntegrationTest
         Client.DefaultRequestHeaders.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
 
+        var comicTypeId = SeedComicType();
+
         var request = new ComicRequest
         {
             Titulo = "URL Inválida",
             WebUrl = "nao-e-uma-url",
-            ComicTypeId = Guid.NewGuid()
+            ComicTypeId = comicTypeId
         };
 
         var content = JsonContent(request);

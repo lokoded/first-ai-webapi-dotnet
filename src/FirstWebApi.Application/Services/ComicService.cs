@@ -1,5 +1,6 @@
 using FirstWebApi.Application.DTOs.Request;
 using FirstWebApi.Application.DTOs.Response;
+using FirstWebApi.Application.Exceptions;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Domain.Entities;
 using FirstWebApi.Domain.Interfaces;
@@ -38,6 +39,12 @@ public class ComicService(
 
     public async Task<ComicResponse> CreateAsync(ComicRequest request, Guid userId)
     {
+        if (string.IsNullOrWhiteSpace(request.Titulo))
+            throw new BadRequestException("Título é obrigatório.");
+
+        if (!Uri.TryCreate(request.WebUrl, UriKind.Absolute, out _))
+            throw new BadRequestException("WebUrl deve ser uma URL válida.");
+
         var comicType = await comicTypeRepository.GetByIdAsync(request.ComicTypeId);
         if (comicType is null)
             throw new KeyNotFoundException("Tipo de quadrinho não encontrado.");
