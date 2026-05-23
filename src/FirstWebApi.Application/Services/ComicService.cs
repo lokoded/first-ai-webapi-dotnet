@@ -22,7 +22,7 @@ public class ComicService(
 
         return new PaginatedResult<ComicResponse>
         {
-            Items = items.Select(MapToResponse).ToList(),
+            Data = items.Select(MapToResponse).ToList(),
             TotalCount = totalCount,
             Page = page,
             PageSize = pageSize

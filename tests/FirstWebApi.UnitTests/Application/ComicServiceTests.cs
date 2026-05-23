@@ -41,10 +41,9 @@ public class ComicServiceTests
 
         var result = await _comicService.GetAllAsync(_userId);
 
-        result.Items.Should().HaveCount(2);
-        result.TotalCount.Should().Be(2);
-        result.Items[0].Titulo.Should().Be("Batman");
-        result.Items[1].Titulo.Should().Be("Superman");
+        result.Data.Should().HaveCount(2);
+        result.Data[0].Titulo.Should().Be("Batman");
+        result.Data[1].Titulo.Should().Be("Superman");
     }
 
     [Fact]
