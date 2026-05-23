@@ -128,7 +128,7 @@ tests/
 - Exemplo: todo *"Criar endpoint de login"* → commit `feat: criar endpoint de login`
 - Se não houver mudanças a commitar, pular silenciosamente
 - Se o commit falhar, reportar o erro ao usuário e não prosseguir
-- Ao marcar o **último** todo da feature:
+- Ao marcar o **último**  todo como `completed` da feature:
   1. Perguntar: *"Deseja fazer push e criar PR?"*
   2. Se sim: `git push -u origin <branch>` e `gh pr create --base develop`
 
