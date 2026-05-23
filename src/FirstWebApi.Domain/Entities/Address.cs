@@ -8,16 +8,13 @@ public class Address
     public Guid UserId { get; private set; }
     public User User { get; private set; } = null!;
 
-    public byte[]? Ciphertext { get; private set; }
-    public byte[]? Iv { get; private set; }
-    public byte[]? Tag { get; private set; }
-    public byte[]? EncryptedDataKey { get; private set; }
+    public byte[]? Dados { get; private set; }
 
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; private set; }
 
-    public EncryptedData? Data => Ciphertext is not null
-        ? new EncryptedData(Ciphertext, Iv!, Tag!, EncryptedDataKey!)
+    public DadoProtegido? Data => Dados is not null
+        ? new DadoProtegido(Dados)
         : null;
 
     protected Address() { }
@@ -28,11 +25,6 @@ public class Address
         UserId = userId;
     }
 
-    public void SetEncryptedData(EncryptedData data)
-    {
-        Ciphertext = data.Ciphertext;
-        Iv = data.Iv;
-        Tag = data.Tag;
-        EncryptedDataKey = data.EncryptedDataKey;
-    }
+    public void SetEncryptedData(DadoProtegido data)
+        => Dados = data.Valor;
 }

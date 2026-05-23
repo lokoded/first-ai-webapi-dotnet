@@ -12,17 +12,21 @@
 | Métrica | Valor |
 |---------|-------|
 | Issues encontradas (original) | **30** (2 críticas, 8 altas, 12 médias, 8 baixas) |
-| Issues corrigidas | **22** ✅ |
-| Issues parcialmente corrigidas | **3** 🔶 (A01, D03, A07) |
-| Issues originais ainda abertas | **3** ❌ (W01, D02, W05) |
-| Novos problemas encontrados (regressão) | **6** 🚨 (N1–N6) |
+| Issues corrigidas | **30** ✅ |
+| Issues parcialmente corrigidas | **0** |
+| Issues originais ainda abertas | **0** ❌ |
+| Novos problemas encontrados (regressão) | **7** 🚨 (N1–N7) |
+| Novos problemas corrigidos | **5** ✅ (N1, N2, N3, N5, N6) |
+| Novos problemas mantidos (intencional) | **2** ⚪ (N4, N7) |
 | Camada com mais issues | Infrastructure (8) + Tests (7) |
 | Arquivo mais problemático | `AuthService.cs` (5 issues) |
 
 ### Status Geral
 
 ```
-30 originais → 22 ✅ + 3 🔶 + 3 ❌ + 6 🚨 novos = 9 pendentes
+30 originais → 30 ✅ + 0 ❌
+  7 novos   →  5 ✅ + 2 ⚪
+  Pendentes: 0
 ```
 
 ### Distribuição por Camada
@@ -129,58 +133,39 @@
 
 ---
 
-## Plano de Correção Pendente (9 issues)
+## Sessão 3 — 2026-05-22 (Verificação final: todas as issues resolvidas)
 
-### Grupo 1 — Segurança
+**Build:** ✅ 0 warnings, 0 errors  
+**Unit Tests:** ✅ 44/44 passed  
+**Regressões novas:** Nenhuma
 
-| # | Issue | Arquivo | Fix | Esforço |
-|---|-------|---------|-----|---------|
-| 1 | N2 (🔴) | `ExceptionMiddleware.cs:33` | `exception.Message` → `"Acesso não autorizado."` | 🟢 1 linha |
+### Itens ❌/🔶 pendentes agora resolvidos
 
-### Grupo 2 — Consistência de Código
+| Issue | Status anterior | Correção |
+|-------|----------------|----------|
+| W01 (🔴) | ❌ Pendente | `FileLogger.cs` movido para `Infrastructure/Logging/`, namespace e DI atualizados |
+| D02 (🔴) | ❌ Pendente | `Cpf` alterado de `readonly record struct` para `record class` |
+| W05 (🟡) | ❌ Pendente | `Created($"/api/admin/comic-types/{id}")` → `CreatedAtAction(null, ...)` |
+| A01 (🔴) | 🔶 Parcial | Todas as `UnauthorizedAccessException`/`InvalidOperationException` → `UnauthorizedException`/`ConflictException`/`BadRequestException`. ExceptionMiddleware atualizado. |
+| D03 (🟡) | 🔶 Parcial | `DadoProtegido(byte[])` criado, 12 colunas crypto → 3 blobs opacos. `EncryptedData` movido para Infrastructure como `internal`. Pack/Unpack no KmsEncryptionService. EF Configurations atualizadas. |
+| A07 (🟢) | 🔶 Parcial | `SensitiveDataService` criado centralizando crypto. `AuthService.RegisterAsync` e `ProfileService.DecryptUserDataAsync` refatorados para usar o novo serviço. |
 
-| # | Issue | Arquivo | Fix | Esforço |
-|---|-------|---------|-----|---------|
-| 2 | N1 (🟡) | `AuthController.cs:59` | `statusCode: 401` → `StatusCodes.Status401Unauthorized` | 🟢 1 linha |
-| 3 | N5 (🟡) | `ComicsController.cs:48,89,106` | `statusCode: 404` → `StatusCodes.Status404NotFound` (3x) | 🟢 3 replaces |
-| 4 | N6 (🟡) | `AdminComicTypesController.cs:47` | `statusCode: 404` → `StatusCodes.Status404NotFound` | 🟢 1 linha |
-| 5 | W05 (🟢) | `AdminComicTypesController.cs:34` | `Created(...)` → `CreatedAtAction(null, new { id = ... }, result)` | 🟢 2 linhas |
+### Itens 🚨 novos agora resolvidos
 
-### Grupo 3 — Correções de Arquitetura
+| Issue | Status anterior | Correção |
+|-------|----------------|----------|
+| N1 (🔴) | 🚨 Novo | `AuthController.cs:59` → `StatusCodes.Status401Unauthorized` |
+| N2 (🔴) | 🚨 Novo | `ExceptionMiddleware.cs:33` → `"Acesso não autorizado."` |
+| N3 (🟡) | 🚨 Novo | `ComicTypeService.cs:32` → `ConflictException` |
+| N5 (🟡) | 🚨 Novo | `ComicsController.cs:48,89,106` → `StatusCodes.Status404NotFound` |
+| N6 (🟡) | 🚨 Novo | `AdminComicTypesController.cs:47` → `StatusCodes.Status404NotFound` |
 
-| # | Issue | Arquivo | Fix | Esforço |
-|---|-------|---------|-----|---------|
-| 6 | N3 (🟡) | `ComicTypeService.cs:32` | `InvalidOperationException` → `ConflictException` | 🟢 1 linha |
-| 7 | W01 (🔴) | `WebApi/Logging/FileLogger.cs` | Mover para `Infrastructure/Logging/` + atualizar namespace e DI | 🟡 3 passos |
-| 8 | D02 (🔴) | `Domain/ValueObjects/Cpf.cs` | `readonly record struct` → `record class` | 🟡 Verificar testes |
-
-### Não recomendado
+### Itens mantidos (intencional)
 
 | Issue | Motivo |
 |-------|--------|
 | N4 — ConflictException vaza message | Mensagens são user-facing ("Email já cadastrado.") — informação legítima |
 | N7 — BadRequestException semantics | Mudar para 401 quebraria contrato da API — consumidores esperam 400 |
-
----
-
-## Dependências entre Correções Pendentes
-
-```
-W01 (FileLogger) ← independente
-  └── mover arquivo + atualizar namespace + DI em Program.cs
-
-D02 (Cpf class) ← independente
-  └── mudar struct → class, validar testes existentes
-
-N2 (ExceptionMiddleware) ← independente
-  └── 1 linha, sem impacto em outras camadas
-
-N1+N5+N6+W05 (magic numbers) ← independentes
-  └── find-and-replace, sem risco
-
-N3 (ComicTypeService) ← independente
-  └── 1 linha, ConflictException já existe
-```
 
 ---
 
@@ -191,19 +176,19 @@ N3 (ComicTypeService) ← independente
 | Ordem | Issue | Status | Correção |
 |-------|-------|--------|----------|
 | 1 | I01+I02 (Crítico) | ✅ | Cache Redis removido (`CachedComicRepository` + `CachedComicTypeRepository` deletados). `ComicService.UpdateAsync` usa entidade trackeada + `SaveChangesAsync()` |
-| 2 | A01 (Alta) | 🔶 Parcial | `ConflictException` e `BadRequestException` criadas. `AuthService.RegisterAsync` usa ambas. `AuthService.LoginAsync`, `RefreshTokenAsync`, `ComicTypeService.DeleteAsync` ainda usam genéricas |
+| 2 | A01 (Alta) | ✅ | `ConflictException`, `BadRequestException`, `UnauthorizedException` criadas. Todas as exceções genéricas substituídas em `AuthService.RegisterAsync`, `LoginAsync`, `RefreshTokenAsync`, `Revoke*`. ExceptionMiddleware mapeia `UnauthorizedException` → 401 com `exception.Message` |
 | 3 | A02 (Alta) | ✅ | Identity errors logados via `ILogger`, mensagem genérica retornada ao cliente |
-| 4 | W01 (Alta) | ❌ Pendente | `FileLogger.cs` ainda em `WebApi/Logging/` |
+| 4 | W01 (Alta) | ✅ | `FileLogger.cs` movido para `Infrastructure/Logging/`, namespace e DI atualizados |
 | 5 | D01 (Alta) | ✅ | `Email` VO integrado em `AuthService.RegisterAsync` (linha 39) |
 | 6 | A03 (Alta) | ✅ | `.Include(c => c.ComicType)` adicionado em `ComicRepository.GetByIdAsync` e `GetPaginatedByUserIdAsync` |
 | 7 | W02 (Alta) | ✅ | `InvalidOperationException` usa mensagem genérica no middleware |
 | 8 | U01+U02 (Alta) | ✅ | `_kmsMock.Object` injetado no construtor do `KmsEncryptionService` |
-| 9 | D02 (Alta) | ❌ Pendente | `Cpf` continua `readonly record struct` — `default(Cpf)` ainda inválido |
+| 9 | D02 (Alta) | ✅ | `Cpf` alterado de `readonly record struct` para `record class` — `default(Cpf)` inválido não é mais possível |
 | 10 | W03 (Média) | ✅ | Extension method `ClaimsPrincipal.GetUserId()` em `Extensions/ClaimsPrincipalExtensions.cs` |
 | 11 | A05+A06 (Média) | ✅ | Helpers `CreateRefreshTokenAsync()`, `GenerateTokenWithRolesAsync()`, `BuildAuthResponse()` extraídos |
 | 12 | IT02+IT03 (Média) | ✅ | `RegisterAndGetTokenAsync()` e `RegisterAndGetAdminTokenAsync()` em `IntegrationTestBase` |
 | 13 | W04 (Média) | ✅ | Controller catch de `UnauthorizedAccessException` removido — tudo passa pelo middleware consistentemente |
-| 14 | D03 (Média) | 🔶 Parcial | `EncryptedData` VO criado. Raw `byte[]` persistem nas entidades (necessário para EF Core) |
+| 14 | D03 (Média) | ✅ | `DadoProtegido(byte[])` criado. `User` (12 byte[] → 2: CpfDados, RgDados) e `Address` (4 byte[] → 1: Dados) refatorados. `EncryptedData` movido para Infrastructure como `internal`. Pack/Unpack com length-prefixed binary via KmsEncryptionService. EF Configurations atualizadas |
 | 15 | I03+I04 (Média) | ✅ | `UpdateAsync` removido de `ComicRepository` — sem `DbSet.Update()` problemático |
 | 16 | I05 (Média) | ✅ | Cache removido — problema de serialização irrelevante |
 | 17 | I06 (Média) | ✅ | `RefreshTokenRepository.UpdateAsync` agora retorna `Task` |
@@ -214,7 +199,7 @@ N3 (ComicTypeService) ← independente
 | 22 | U03 (Média) | ✅ | Setup de mock simplificado |
 | 23 | U04 (Média) | ✅ | Factory method `CreateComic()` com parâmetros default |
 | 24 | U05 (Média) | ✅ | `Email` VO agora usado em produção — testes validam código real |
-| 25 | W05 (Média) | ❌ Pendente | URL hardcoded em `AdminComicTypesController.Created()` |
+| 25 | W05 (Média) | ✅ | `Created($"/api/admin/comic-types/{id}")` → `CreatedAtAction(null, new { id = ... }, result)` |
 | 26 | W06 (Baixa) | ✅ | Magic `401` → `StatusCodes.Status401Unauthorized` no `ComicsController` |
 | 27 | W07 (Baixa) | ✅ | `using Microsoft.AspNetCore.Mvc.ModelBinding` removido dos 3 controllers |
 | 28 | D06 (Baixa) | ✅ | `int.Parse(c.ToString())` → `c - '0'` |
@@ -223,7 +208,7 @@ N3 (ComicTypeService) ← independente
 | 31 | I08 (Baixa) | ✅ | XML doc adicionada em `IRefreshTokenRepository` e `RefreshTokenRepository` |
 | 32 | W08 (Baixa) | ✅ | Helper não criado (decisão consciente — evitaria overengineering) |
 | 33 | U06 (Baixa) | ✅ | Dead mock `GetByIdAsync` removido de `ComicServiceTests.CreateAsync` |
-| 34 | A07 (Baixa) | 🔶 Parcial | 56→51 linhas via extração A05+A06. Sem decomposição adicional (aceitável) |
+| 34 | A07 (Baixa) | ✅ | `SensitiveDataService` criado centralizando `EncryptCpfAsync`, `EncryptRgAsync`, `EncryptEnderecoAsync`, `DecryptUserDataAsync`. `AuthService.RegisterAsync` (56→21 linhas) e `ProfileService` (removeu decryption inline) refatorados. `IAddressRepository` removido do `AuthService` |
 | 35 | IT04 (Baixa) | ✅ | `JsonContent<T>()` helper em `IntegrationTestBase` + `AuthControllerTests` |
 | 36 | IT05 (Baixa) | ✅ | Body assert adicionado: `Nome.Should().StartWith("Mangá_")` |
 
@@ -231,15 +216,15 @@ N3 (ComicTypeService) ← independente
 
 **7 novos problemas** detectados na verificação de regressão:
 
-| # | Severidade | Arquivo | Linha | Problema | Origem |
-|---|-----------|---------|-------|----------|--------|
-| N1 | 🔴 Alta | `AuthController.cs` | 59 | Magic `401` hardcoded no `Revoke()` | Escapou do W06 (só cobriu ComicsController) |
-| N2 | 🔴 Alta | `ExceptionMiddleware.cs` | 33 | `UnauthorizedAccessException` vaza `exception.Message` | W02 não cobriu esse caso |
-| N3 | 🟡 Média | `ComicTypeService.cs` | 32 | `InvalidOperationException` → deveria ser `ConflictException` | Mesmo anti-pattern do A01 |
-| N4 | 🟡 Média | `ExceptionMiddleware.cs` | 31 | `ConflictException` vaza `exception.Message` (intencional — msgs são user-facing) | — |
-| N5 | 🟡 Média | `ComicsController.cs` | 48,89,106 | Magic `404` hardcoded | Não estava na auditoria original |
-| N6 | 🟡 Média | `AdminComicTypesController.cs` | 47 | Magic `404` hardcoded | Não estava na auditoria original |
-| N7 | 🟢 Baixa | `ProfileService.cs` | 54 | `BadRequestException` para senha inválida (semântica 400 vs 401) | Não recomendado corrigir (quebra contrato) |
+| # | Severidade | Arquivo | Linha | Problema | Origem | Status |
+|---|-----------|---------|-------|----------|--------|--------|
+| N1 | 🔴 Alta | `AuthController.cs` | 59 | Magic `401` hardcoded no `Revoke()` | Escapou do W06 (só cobriu ComicsController) | ✅ Corrigido |
+| N2 | 🔴 Alta | `ExceptionMiddleware.cs` | 33 | `UnauthorizedAccessException` vaza `exception.Message` | W02 não cobriu esse caso | ✅ Corrigido |
+| N3 | 🟡 Média | `ComicTypeService.cs` | 32 | `InvalidOperationException` → deveria ser `ConflictException` | Mesmo anti-pattern do A01 | ✅ Corrigido |
+| N4 | 🟡 Média | `ExceptionMiddleware.cs` | 31 | `ConflictException` vaza `exception.Message` (intencional — msgs são user-facing) | — | ⚪ Mantido |
+| N5 | 🟡 Média | `ComicsController.cs` | 48,89,106 | Magic `404` hardcoded | Não estava na auditoria original | ✅ Corrigido |
+| N6 | 🟡 Média | `AdminComicTypesController.cs` | 47 | Magic `404` hardcoded | Não estava na auditoria original | ✅ Corrigido |
+| N7 | 🟢 Baixa | `ProfileService.cs` | 54 | `BadRequestException` para senha inválida (semântica 400 vs 401) | Não recomendado corrigir (quebra contrato) | ⚪ Mantido |
 
 ---
 
@@ -271,5 +256,7 @@ dotnet tool install -g dotnet-consolidate 2>$null
 |------|--------|---------|--------|
 | 2026-05-22 | 1.0 | opencode/dev-agent | Full codebase — 30 issues encontradas |
 | 2026-05-22 | 2.0 | opencode/dev-agent | Verificação pós-correção — 22 corrigidas, 3 🔶, 3 ❌, 6 🚨 novos |
+| 2026-05-22 | 3.0 | opencode/dev-agent | Verificação final — 27 ✅ + 3 🔶 + 0 ❌, 5 ✅ novos + 2 ⚪, nenhuma regressão |
+| 2026-05-23 | 4.0 | opencode/dev-agent | A01+D03+A07 resolvidos — 30/30 ✅ originais. Build 0/0, 44/44 testes |
 
 *Mantenha este histórico atualizado para rastrear progresso ao longo do tempo.*

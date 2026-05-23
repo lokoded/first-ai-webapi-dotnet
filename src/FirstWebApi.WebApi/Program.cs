@@ -107,6 +107,7 @@ builder.Services.AddScoped<IUnitOfWork>(sp => sp.GetRequiredService<AppDbContext
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IEncryptionService, KmsEncryptionService>();
+builder.Services.AddScoped<ISensitiveDataService, SensitiveDataService>();
 builder.Services.AddScoped<IComicService, ComicService>();
 builder.Services.AddScoped<IComicTypeService, ComicTypeService>();
 builder.Services.AddScoped<IProfileService, ProfileService>();

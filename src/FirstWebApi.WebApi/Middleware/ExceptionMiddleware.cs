@@ -30,6 +30,7 @@ public class ExceptionMiddleware(RequestDelegate next, ILogger<ExceptionMiddlewa
         {
             ConflictException => (HttpStatusCode.Conflict, "Conflito", exception.Message),
             BadRequestException => (HttpStatusCode.BadRequest, "Requisição inválida", exception.Message),
+            UnauthorizedException => (HttpStatusCode.Unauthorized, "Não autorizado", exception.Message),
             UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "Não autorizado", "Acesso não autorizado."),
             KeyNotFoundException => (HttpStatusCode.NotFound, "Não encontrado", exception.Message),
             InvalidOperationException => (HttpStatusCode.InternalServerError, "Erro interno", "Ocorreu um erro interno no servidor."),

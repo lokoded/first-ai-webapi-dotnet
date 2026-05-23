@@ -1,22 +1,16 @@
-using System.Text.Json;
-using FirstWebApi.Application.DTOs;
 using FirstWebApi.Application.DTOs.Response;
 using FirstWebApi.Application.Exceptions;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Domain.Entities;
-using FirstWebApi.Domain.ValueObjects;
 using FirstWebApi.Domain.Interfaces;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
 
 namespace FirstWebApi.Application.Services;
 
 public class ProfileService(
     IUserRepository userRepository,
-    IAddressRepository addressRepository,
-    IEncryptionService encryptionService,
-    UserManager<User> userManager,
-    ILogger<ProfileService> logger) : IProfileService
+    ISensitiveDataService sensitiveData,
+    UserManager<User> userManager) : IProfileService
 {
 
     public async Task<UserResponse> GetProfileAsync(Guid userId)
@@ -26,7 +20,7 @@ public class ProfileService(
             throw new KeyNotFoundException("Usuário não encontrado.");
 
         var roles = await userManager.GetRolesAsync(user);
-        var (cpf, rg, endereco) = await DecryptUserDataAsync(user, userId);
+        var (cpf, rg, endereco) = await sensitiveData.DecryptUserDataAsync(user, userId);
 
         return new UserResponse
         {
@@ -54,7 +48,7 @@ public class ProfileService(
             throw new BadRequestException("Senha inválida. Reautenticação necessária.");
 
         var roles = await userManager.GetRolesAsync(user);
-        var (cpf, rg, endereco) = await DecryptUserDataAsync(user, userId);
+        var (cpf, rg, endereco) = await sensitiveData.DecryptUserDataAsync(user, userId);
 
         return new UserResponse
         {
@@ -70,36 +64,4 @@ public class ProfileService(
             HasFullData = true
         };
     }
-
-    private async Task<(string? cpf, string? rg, EnderecoInfo? endereco)> DecryptUserDataAsync(User user, Guid userId)
-    {
-        var cpf = await DecryptFieldAsync(user.CpfData, "CPF", userId);
-        var rg = await DecryptFieldAsync(user.RgData, "RG", userId);
-
-        var address = await addressRepository.GetByUserIdAsync(userId);
-        var enderecoJson = await DecryptFieldAsync(address?.Data, "endereço", userId);
-
-        EnderecoInfo? endereco = null;
-        if (enderecoJson is not null)
-            endereco = JsonSerializer.Deserialize<EnderecoInfo>(enderecoJson);
-
-        return (cpf, rg, endereco);
-    }
-
-    private async Task<string?> DecryptFieldAsync(EncryptedData? data, string fieldName, Guid userId)
-    {
-        if (data is not EncryptedData encrypted)
-            return null;
-
-        try
-        {
-            return await encryptionService.DecryptAsync(encrypted);
-        }
-        catch (Exception ex)
-        {
-            logger.LogError(ex, "Erro ao descriptografar {FieldName} do usuário {UserId}", fieldName, userId);
-            return null;
-        }
-    }
-
 }

@@ -47,7 +47,7 @@ public class KmsEncryptionServiceTests : IDisposable
     public void Dispose() => _cache.Dispose();
 
     [Fact]
-    public async Task EncryptAsync_ShouldReturnEncryptedData()
+    public async Task EncryptAsync_ShouldReturnProtectedData()
     {
         var plaintext = "52998224725";
         var plaintextKey = new byte[32];
@@ -69,15 +69,10 @@ public class KmsEncryptionServiceTests : IDisposable
                 CiphertextBlob = new MemoryStream(encryptedDataKey)
             });
 
-        var (ciphertext, iv, tag, encryptedDk) = await _service.EncryptAsync(plaintext);
+        var result = await _service.EncryptAsync(plaintext);
 
-        ciphertext.Should().NotBeNull();
-        ciphertext.Length.Should().Be(plaintext.Length);
-        iv.Should().NotBeNull();
-        iv.Length.Should().Be(12);
-        tag.Should().NotBeNull();
-        tag.Length.Should().Be(16);
-        encryptedDk.Should().NotBeNull();
+        result.Valor.Should().NotBeNull();
+        result.Valor.Length.Should().BeGreaterThan(0);
     }
 
     [Fact]

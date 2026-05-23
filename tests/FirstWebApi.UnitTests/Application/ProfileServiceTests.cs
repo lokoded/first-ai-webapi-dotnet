@@ -1,10 +1,10 @@
+using FirstWebApi.Application.DTOs;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Application.Services;
 using FirstWebApi.Domain.Entities;
 using FirstWebApi.Domain.Interfaces;
 using FluentAssertions;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace FirstWebApi.UnitTests.Application;
@@ -13,9 +13,7 @@ public class ProfileServiceTests
 {
     private readonly Mock<UserManager<User>> _userManagerMock;
     private readonly Mock<IUserRepository> _userRepoMock;
-    private readonly Mock<IEncryptionService> _encryptionMock;
-    private readonly Mock<ILogger<ProfileService>> _loggerMock;
-    private readonly Mock<IAddressRepository> _addressRepoMock;
+    private readonly Mock<ISensitiveDataService> _sensitiveDataMock;
     private readonly ProfileService _profileService;
 
     public ProfileServiceTests()
@@ -23,16 +21,12 @@ public class ProfileServiceTests
         _userManagerMock = new Mock<UserManager<User>>(
             Mock.Of<IUserStore<User>>(), null!, null!, null!, null!, null!, null!, null!, null!);
         _userRepoMock = new Mock<IUserRepository>();
-        _encryptionMock = new Mock<IEncryptionService>();
-        _loggerMock = new Mock<ILogger<ProfileService>>();
-        _addressRepoMock = new Mock<IAddressRepository>();
+        _sensitiveDataMock = new Mock<ISensitiveDataService>();
 
         _profileService = new ProfileService(
             _userRepoMock.Object,
-            _addressRepoMock.Object,
-            _encryptionMock.Object,
-            _userManagerMock.Object,
-            _loggerMock.Object);
+            _sensitiveDataMock.Object,
+            _userManagerMock.Object);
     }
 
     [Fact]
@@ -45,6 +39,8 @@ public class ProfileServiceTests
             .ReturnsAsync(user);
         _userManagerMock.Setup(m => m.GetRolesAsync(user))
             .ReturnsAsync(["User"]);
+        _sensitiveDataMock.Setup(m => m.DecryptUserDataAsync(user, userId))
+            .ReturnsAsync(((string?)null, (string?)null, (EnderecoInfo?)null));
 
         var result = await _profileService.GetProfileAsync(userId);
 

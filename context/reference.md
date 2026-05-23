@@ -71,7 +71,11 @@ dotnet ef migrations script <De> <Para> --idempotent -o scripts/rollback.sql
 - **Português brasileiro** nas strings voltadas ao usuário (mensagens de erro, validação), inglês nos identificadores do código.
 - **Health endpoint**: `GET /health` retorna `{ status: "healthy", timestamp }` (usado pelo Docker HEALTHCHECK).
 - **ValueObjects no Domain**: `Cpf` e `Email` são structs com validação própria. Nunca armazenar CPF/email como `string` pura no domínio.
-- **LGPD / KMS envelope encryption**: CPF e RG do `User` são cifrados via `IEncryptionService` (AWS KMS `GenerateDataKey` + AES-256). Dados ficam em `byte[]` (`CpfCiphertext`, `CpfIv`, `CpfTag`, `CpfEncryptedDataKey`). Sempre usar o serviço de criptografia, nunca armazenar texto puro.
+- **LGPD / KMS envelope encryption**: CPF, RG e endereço cifrados via `IEncryptionService`
+  (AWS KMS `GenerateDataKey` + AES-256-GCM envelope). Armazenados como
+  `DadoProtegido(byte[])` (1 `varbinary(max)` por campo). A Infrastructure gerencia
+  o formato interno de serialização (empacotamento de ciphertext + nonce + tag + chave).
+  Domain conhece apenas `DadoProtegido`. Sempre usar o serviço de criptografia, nunca texto puro.
 - **Role padrão**: todo usuário registrado recebe "User". Admin é promovido manualmente no banco.
 - **JSON é o formato padrão**: controllers **não** usam `[Produces("application/json")]` — o ASP.NET Core já negocia JSON como default.
 
