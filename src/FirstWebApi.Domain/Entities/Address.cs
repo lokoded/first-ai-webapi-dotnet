@@ -1,3 +1,5 @@
+using FirstWebApi.Domain.ValueObjects;
+
 namespace FirstWebApi.Domain.Entities;
 
 public class Address
@@ -14,6 +16,10 @@ public class Address
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; private set; }
 
+    public EncryptedData? Data => Ciphertext is not null
+        ? new EncryptedData(Ciphertext, Iv!, Tag!, EncryptedDataKey!)
+        : null;
+
     protected Address() { }
 
     public Address(Guid userId)
@@ -22,12 +28,12 @@ public class Address
         UserId = userId;
     }
 
-    public void SetEncryptedData(byte[] ciphertext, byte[] iv, byte[] tag, byte[] encryptedDataKey)
+    public void SetEncryptedData(EncryptedData data)
     {
-        Ciphertext = ciphertext;
-        Iv = iv;
-        Tag = tag;
-        EncryptedDataKey = encryptedDataKey;
+        Ciphertext = data.Ciphertext;
+        Iv = data.Iv;
+        Tag = data.Tag;
+        EncryptedDataKey = data.EncryptedDataKey;
         UpdatedAt = DateTime.UtcNow;
     }
 }

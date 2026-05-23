@@ -3,6 +3,7 @@ using Amazon;
 using Amazon.KeyManagementService;
 using Amazon.KeyManagementService.Model;
 using FirstWebApi.Application.Interfaces;
+using FirstWebApi.Domain.ValueObjects;
 using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -95,7 +96,7 @@ public class KmsEncryptionService(
         }
     }
 
-    public async Task<(byte[] ciphertext, byte[] iv, byte[] tag, byte[] encryptedDataKey)> EncryptAsync(string plaintext)
+    public async Task<EncryptedData> EncryptAsync(string plaintext)
     {
         await EnsureInitializedAsync();
         var dataKeyResponse = await _kmsClient.GenerateDataKeyAsync(new GenerateDataKeyRequest
@@ -124,19 +125,19 @@ public class KmsEncryptionService(
         using var aesGcm = new AesGcm(plaintextKeyBytes, AesGcm.TagByteSizes.MaxSize);
         aesGcm.Encrypt(nonce, plaintextBytes, ciphertextBytes, tag);
 
-        return (ciphertextBytes, nonce, tag, encryptedDataKeyBytes);
+        return new EncryptedData(ciphertextBytes, nonce, tag, encryptedDataKeyBytes);
     }
 
-    public async Task<string> DecryptAsync(byte[] ciphertext, byte[] iv, byte[] tag, byte[] encryptedDataKey)
+    public async Task<string> DecryptAsync(EncryptedData data)
     {
         await EnsureInitializedAsync();
-        var cacheKey = Convert.ToBase64String(encryptedDataKey);
+        var cacheKey = Convert.ToBase64String(data.EncryptedDataKey);
 
         if (!_cache.TryGetValue(cacheKey, out byte[]? plaintextKey))
         {
             var decryptResponse = await _kmsClient.DecryptAsync(new DecryptRequest
             {
-                CiphertextBlob = new MemoryStream(encryptedDataKey),
+                CiphertextBlob = new MemoryStream(data.EncryptedDataKey),
                 KeyId = _keyId
             });
             plaintextKey = decryptResponse.Plaintext.ToArray();
@@ -147,9 +148,9 @@ public class KmsEncryptionService(
             });
         }
 
-        var plaintextBytes = new byte[ciphertext.Length];
+        var plaintextBytes = new byte[data.Ciphertext.Length];
         using var aesGcm = new AesGcm(plaintextKey!, AesGcm.TagByteSizes.MaxSize);
-        aesGcm.Decrypt(iv, ciphertext, tag, plaintextBytes);
+        aesGcm.Decrypt(data.Iv, data.Ciphertext, data.Tag, plaintextBytes);
 
         return System.Text.Encoding.UTF8.GetString(plaintextBytes);
     }

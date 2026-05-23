@@ -1,3 +1,4 @@
+using FirstWebApi.Domain.ValueObjects;
 using Microsoft.AspNetCore.Identity;
 
 namespace FirstWebApi.Domain.Entities;
@@ -19,6 +20,14 @@ public class User : IdentityUser<Guid>
     public DateTime CreatedAt { get; private set; } = DateTime.UtcNow;
     public DateTime? UpdatedAt { get; private set; }
 
+    public EncryptedData? CpfData => CpfCiphertext is not null
+        ? new EncryptedData(CpfCiphertext, CpfIv!, CpfTag!, CpfEncryptedDataKey!)
+        : null;
+
+    public EncryptedData? RgData => RgCiphertext is not null
+        ? new EncryptedData(RgCiphertext, RgIv!, RgTag!, RgEncryptedDataKey!)
+        : null;
+
     protected User() { }
 
     public User(string nome, string userName, string email) : base()
@@ -29,19 +38,19 @@ public class User : IdentityUser<Guid>
         Email = email;
     }
 
-    public void SetCpfData(byte[] ciphertext, byte[] iv, byte[] tag, byte[] encryptedDataKey)
+    public void SetCpfData(EncryptedData data)
     {
-        CpfCiphertext = ciphertext;
-        CpfIv = iv;
-        CpfTag = tag;
-        CpfEncryptedDataKey = encryptedDataKey;
+        CpfCiphertext = data.Ciphertext;
+        CpfIv = data.Iv;
+        CpfTag = data.Tag;
+        CpfEncryptedDataKey = data.EncryptedDataKey;
     }
 
-    public void SetRgData(byte[] ciphertext, byte[] iv, byte[] tag, byte[] encryptedDataKey)
+    public void SetRgData(EncryptedData data)
     {
-        RgCiphertext = ciphertext;
-        RgIv = iv;
-        RgTag = tag;
-        RgEncryptedDataKey = encryptedDataKey;
+        RgCiphertext = data.Ciphertext;
+        RgIv = data.Iv;
+        RgTag = data.Tag;
+        RgEncryptedDataKey = data.EncryptedDataKey;
     }
 }

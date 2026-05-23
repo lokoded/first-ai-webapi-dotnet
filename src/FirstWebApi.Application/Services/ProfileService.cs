@@ -4,6 +4,7 @@ using FirstWebApi.Application.DTOs.Response;
 using FirstWebApi.Application.Exceptions;
 using FirstWebApi.Application.Interfaces;
 using FirstWebApi.Domain.Entities;
+using FirstWebApi.Domain.ValueObjects;
 using FirstWebApi.Domain.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Logging;
@@ -72,18 +73,11 @@ public class ProfileService(
 
     private async Task<(string? cpf, string? rg, EnderecoInfo? endereco)> DecryptUserDataAsync(User user, Guid userId)
     {
-        var cpf = await DecryptFieldAsync(
-            user.CpfCiphertext, user.CpfIv, user.CpfTag, user.CpfEncryptedDataKey,
-            "CPF", userId);
-
-        var rg = await DecryptFieldAsync(
-            user.RgCiphertext, user.RgIv, user.RgTag, user.RgEncryptedDataKey,
-            "RG", userId);
+        var cpf = await DecryptFieldAsync(user.CpfData, "CPF", userId);
+        var rg = await DecryptFieldAsync(user.RgData, "RG", userId);
 
         var address = await addressRepository.GetByUserIdAsync(userId);
-        var enderecoJson = await DecryptFieldAsync(
-            address?.Ciphertext, address?.Iv, address?.Tag, address?.EncryptedDataKey,
-            "endereço", userId);
+        var enderecoJson = await DecryptFieldAsync(address?.Data, "endereço", userId);
 
         EnderecoInfo? endereco = null;
         if (enderecoJson is not null)
@@ -92,16 +86,14 @@ public class ProfileService(
         return (cpf, rg, endereco);
     }
 
-    private async Task<string?> DecryptFieldAsync(
-        byte[]? ciphertext, byte[]? iv, byte[]? tag, byte[]? encryptedDataKey,
-        string fieldName, Guid userId)
+    private async Task<string?> DecryptFieldAsync(EncryptedData? data, string fieldName, Guid userId)
     {
-        if (ciphertext is null || iv is null || tag is null || encryptedDataKey is null)
+        if (data is not EncryptedData encrypted)
             return null;
 
         try
         {
-            return await encryptionService.DecryptAsync(ciphertext, iv, tag, encryptedDataKey);
+            return await encryptionService.DecryptAsync(encrypted);
         }
         catch (Exception ex)
         {

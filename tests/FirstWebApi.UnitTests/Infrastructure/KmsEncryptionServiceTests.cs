@@ -110,8 +110,8 @@ public class KmsEncryptionServiceTests : IDisposable
                 Plaintext = new MemoryStream(plaintextKey)
             });
 
-        var (ciphertext, iv, tag, encryptedDk) = await _service.EncryptAsync(plaintext);
-        var decrypted = await _service.DecryptAsync(ciphertext, iv, tag, encryptedDk);
+        var encryptedData = await _service.EncryptAsync(plaintext);
+        var decrypted = await _service.DecryptAsync(encryptedData);
 
         decrypted.Should().Be(plaintext);
     }

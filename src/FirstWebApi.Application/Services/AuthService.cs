@@ -51,22 +51,22 @@ public class AuthService(
         if (!string.IsNullOrEmpty(request.Cpf))
         {
             var cpf = new Cpf(request.Cpf);
-            var (ciphertext, iv, tag, dk) = await encryptionService.EncryptAsync(cpf.Numero);
-            user.SetCpfData(ciphertext, iv, tag, dk);
+            var data = await encryptionService.EncryptAsync(cpf.Numero);
+            user.SetCpfData(data);
         }
 
         if (!string.IsNullOrEmpty(request.Rg))
         {
-            var (ciphertext, iv, tag, dk) = await encryptionService.EncryptAsync(request.Rg);
-            user.SetRgData(ciphertext, iv, tag, dk);
+            var data = await encryptionService.EncryptAsync(request.Rg);
+            user.SetRgData(data);
         }
 
         if (request.Endereco != null && !request.Endereco.IsEmpty)
         {
             var json = JsonSerializer.Serialize(request.Endereco);
-            var (ciphertext, iv, tag, dk) = await encryptionService.EncryptAsync(json);
+            var data = await encryptionService.EncryptAsync(json);
             var address = new Address(user.Id);
-            address.SetEncryptedData(ciphertext, iv, tag, dk);
+            address.SetEncryptedData(data);
             await addressRepository.AddAsync(address);
         }
 
